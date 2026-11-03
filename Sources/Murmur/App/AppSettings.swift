@@ -45,6 +45,8 @@ final class AppSettings {
     var watchFolderEnabled: Bool { didSet { defaults.set(watchFolderEnabled, forKey: "watchFolderEnabled") } }
     var watchFolder: URL? { didSet { defaults.set(watchFolder?.path, forKey: "watchFolder") } }
     var hasOnboarded: Bool { didSet { defaults.set(hasOnboarded, forKey: "hasOnboarded") } }
+    var sort: TransferSort { didSet { defaults.set(sort.rawValue, forKey: "sort") } }
+    var sortAscending: Bool { didSet { defaults.set(sortAscending, forKey: "sortAscending") } }
 
     var encryption: EncryptionMode { didSet { defaults.set(encryption.rawValue, forKey: "encryption"); apply() } }
     var enableLocalDiscovery: Bool { didSet { defaults.set(enableLocalDiscovery, forKey: "enableLocalDiscovery"); apply() } }
@@ -91,6 +93,7 @@ final class AppSettings {
             "scheduleStart": 9 * 60,
             "scheduleEnd": 17 * 60,
             "scheduleDays": [2, 3, 4, 5, 6],
+            "sortAscending": true,
         ])
         downloadFolder = defaults.string(forKey: "downloadFolder").map { URL(fileURLWithPath: $0) } ?? downloads
         showAddOptions = defaults.bool(forKey: "showAddOptions")
@@ -118,6 +121,8 @@ final class AppSettings {
         watchFolderEnabled = defaults.bool(forKey: "watchFolderEnabled")
         watchFolder = defaults.string(forKey: "watchFolder").map { URL(fileURLWithPath: $0) }
         hasOnboarded = defaults.bool(forKey: "hasOnboarded")
+        sort = TransferSort(rawValue: defaults.string(forKey: "sort") ?? "") ?? .queue
+        sortAscending = defaults.bool(forKey: "sortAscending")
         encryption = EncryptionMode(rawValue: defaults.string(forKey: "encryption") ?? "") ?? .preferred
         enableLocalDiscovery = defaults.bool(forKey: "enableLocalDiscovery")
         extraTrackers = defaults.string(forKey: "extraTrackers") ?? ""

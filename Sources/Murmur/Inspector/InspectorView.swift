@@ -126,17 +126,29 @@ private struct OverviewTab: View {
                 InspectorCard("Transfer") {
                     InfoRow(label: "Downloaded", value: status.downloaded.bytes)
                     InfoRow(label: "Uploaded", value: status.uploaded.bytes)
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Text("Ratio").foregroundStyle(.secondary).frame(width: 92, alignment: .trailing)
-                        Text(Format.ratio(status.ratio)).monospacedDigit()
-                        Spacer()
-                        RatioMenu(status: status)
-                    }
-                    .font(.callout)
+                    InfoRow(label: "Ratio", value: Format.ratio(status.ratio))
                     InfoRow(label: "Peers", value: "\(status.connectedPeers) connected · \(status.knownPeers) known")
                     if status.swarmSeeders != nil || status.swarmLeechers != nil {
                         InfoRow(label: "Swarm", value: "\((status.swarmSeeders ?? 0).formatted()) seeds · \((status.swarmLeechers ?? 0).formatted()) leechers")
                     }
+                }
+
+                InspectorCard("Options") {
+                    Toggle("Download in order", isOn: Binding(get: { status.isSequential }, set: { store.setSequential([status.id], $0) }))
+                        .help("Fetch pieces from start to end, so media can be previewed while downloading")
+                    TransferLimitRow(title: "Limit download", value: status.downloadLimit) { store.setSpeedLimits([status.id], download: $0, upload: nil) }
+                    TransferLimitRow(title: "Limit upload", value: status.uploadLimit) { store.setSpeedLimits([status.id], download: nil, upload: $0) }
+                    HStack {
+                        Text("Seeding")
+                        Spacer()
+                        RatioMenu(status: status)
+                    }
+                    HStack {
+                        Button("Copy Magnet Link", systemImage: "link") { store.copyMagnetLinks([status.id]) }
+                        Button("Verify", systemImage: "checkmark.shield") { store.recheck([status.id]) }
+                    }
+                    .buttonStyle(.glass)
+                    .controlSize(.small)
                 }
 
                 InspectorCard("Details") {
@@ -172,18 +184,6 @@ private struct OverviewTab: View {
                     }
                 }
 
-                InspectorCard("Options") {
-                    Toggle("Download in order", isOn: Binding(get: { status.isSequential }, set: { store.setSequential([status.id], $0) }))
-                        .help("Fetch pieces from start to end, so media can be previewed while downloading")
-                    TransferLimitRow(title: "Limit download", value: status.downloadLimit) { store.setSpeedLimits([status.id], download: $0, upload: nil) }
-                    TransferLimitRow(title: "Limit upload", value: status.uploadLimit) { store.setSpeedLimits([status.id], download: nil, upload: $0) }
-                    HStack {
-                        Button("Copy Magnet Link", systemImage: "link") { store.copyMagnetLinks([status.id]) }
-                        Button("Verify", systemImage: "checkmark.shield") { store.recheck([status.id]) }
-                    }
-                    .buttonStyle(.glass)
-                    .controlSize(.small)
-                }
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
@@ -241,14 +241,16 @@ private struct RatioMenu: View {
         } label: {
             Text(label)
         }
-        .menuStyle(.borderlessButton)
         .fixedSize()
-        .font(.caption)
+        .help("When to stop seeding this transfer")
     }
 
     private var label: String {
-        guard let limit = status.ratioLimit else { return "Default limit" }
-        return limit < 0 ? "Seed forever" : "Stop at \(Format.ratio(limit))"
+        guard let limit = status.ratioLimit else {
+            let settings = AppSettings.shared
+            return settings.stopAtRatio ? "Default (stop at \(Format.ratio(settings.ratioLimit)))" : "Default (forever)"
+        }
+        return limit < 0 ? "Seed forever" : "Stop at ratio \(Format.ratio(limit))"
     }
 }
 
@@ -503,10 +505,10 @@ private struct TrackerRow: View {
                     .help(tracker.url)
                 Spacer()
                 if let seeders = tracker.seeders, let leechers = tracker.leechers {
-                    Text("\(seeders.formatted()) ↑  \(leechers.formatted()) ↓")
+                    Text("\(seeders.formatted()) seeds · \(leechers.formatted()) leechers")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
-                        .help("\(seeders) seeds, \(leechers) downloading")
+                        .help("\(seeders.formatted()) with the whole thing, \(leechers.formatted()) still downloading")
                 }
             }
             HStack(spacing: 6) {

@@ -37,11 +37,19 @@ struct AddMagnetSheet: View {
                     }
                 }
             if let link = parsed {
-                Label(link.displayName ?? link.infoHash.hex, systemImage: "checkmark.circle.fill")
-                    .font(.callout)
-                    .foregroundStyle(.green)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                let existing = store.transfers.contains { $0.id == link.infoHash }
+                HStack(spacing: 6) {
+                    Image(systemName: existing ? "arrow.uturn.forward.circle.fill" : "checkmark.circle.fill")
+                        .foregroundStyle(existing ? .orange : .green)
+                    Text(link.displayName ?? link.infoHash.hex)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Text(existing ? "Already added; its trackers will be merged" : sources(link))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .layoutPriority(-1)
+                }
+                .font(.callout)
             }
             HStack {
                 Spacer()
@@ -57,6 +65,13 @@ struct AddMagnetSheet: View {
         }
         .padding(20)
         .frame(width: 500)
+    }
+
+    private func sources(_ link: MagnetLink) -> String {
+        var parts: [String] = []
+        if !link.trackers.isEmpty { parts.append("\(link.trackers.count) tracker\(link.trackers.count == 1 ? "" : "s")") }
+        if !link.webSeeds.isEmpty { parts.append("\(link.webSeeds.count) web seed\(link.webSeeds.count == 1 ? "" : "s")") }
+        return parts.isEmpty ? "· peers from the DHT" : "· " + parts.joined(separator: ", ")
     }
 
     private var parsed: MagnetLink? {
@@ -126,20 +141,33 @@ struct AddTorrentSheet: View {
                 Divider()
             }
 
-            Form {
-                LabeledContent("Save to") {
-                    HStack {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: folder.path)).resizable().frame(width: 16, height: 16)
-                        Text((folder.path as NSString).abbreviatingWithTildeInPath).lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        Button("Choose…") { chooseFolder() }
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Text("Save to").foregroundStyle(.secondary)
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: folder.path)).resizable().frame(width: 16, height: 16)
+                    Text((folder.path as NSString).abbreviatingWithTildeInPath)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(folder.path)
+                    Spacer(minLength: 8)
+                    Button("Choose…") { chooseFolder() }
+                }
+                HStack {
+                    Toggle("Start downloading right away", isOn: $start)
+                    Spacer()
+                    if let available {
+                        Text("\(available.bytes) available")
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(available < selectedSize ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                            .help(available < selectedSize ? "There isn’t enough space for the selected files." : "Free space on this disk")
                     }
                 }
-                Toggle("Start downloading right away", isOn: $start)
             }
-            .formStyle(.grouped)
-            .scrollDisabled(true)
-            .frame(height: 110)
+            .padding(14)
+            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.horizontal, 20)
+            .padding(.top, files.count > 1 ? 20 : 0)
 
             HStack {
                 Spacer()
@@ -150,9 +178,15 @@ struct AddTorrentSheet: View {
                     .buttonStyle(.glassProminent)
                     .disabled(selectedCount == 0)
             }
-            .padding([.horizontal, .bottom], 20)
+            .padding(20)
         }
         .frame(width: 560)
+    }
+
+    /// Free space on the destination's volume.
+    private var available: Int64? {
+        let values = try? folder.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        return values?.volumeAvailableCapacityForImportantUsage
     }
 
     private var selectedCount: Int { files.filter { (priorities[$0.id] ?? .normal) != .skip }.count }
@@ -196,7 +230,17 @@ struct CreateTorrentSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Create Torrent").font(.title3.weight(.semibold))
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.up.doc.fill")
+                    .font(.system(size: 30))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.tint)
+                    .frame(width: 34)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Create Torrent").font(.title3.weight(.semibold))
+                    Text("Share a file or folder from your Mac.").foregroundStyle(.secondary)
+                }
+            }
 
             Button(action: chooseSource) {
                 HStack(spacing: 12) {
@@ -347,6 +391,8 @@ struct WelcomeView: View {
                 } label: {
                     Text("Downloads go to")
                     Text((settings.downloadFolder.path as NSString).abbreviatingWithTildeInPath)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
                 }
                 LabeledContent {
                     if isDefault {

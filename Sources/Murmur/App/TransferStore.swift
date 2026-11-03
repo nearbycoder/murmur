@@ -94,8 +94,6 @@ final class TransferStore {
         didSet { if selection != oldValue { details = nil; refreshDetails() } }
     }
     var filter: TransferFilter = .all
-    var sort: TransferSort = .queue
-    var sortAscending = true
     var searchText = ""
     var inspectorVisible = true
     private(set) var details: TorrentDetails?
@@ -232,7 +230,7 @@ final class TransferStore {
         let query = searchText.trimmingCharacters(in: .whitespaces)
         if !query.isEmpty { list = list.filter { $0.name.localizedCaseInsensitiveContains(query) } }
         let sorted: [TorrentStatus]
-        switch sort {
+        switch settings.sort {
         case .queue: sorted = list
         case .name: sorted = list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         case .dateAdded: sorted = list.sorted { $0.addedDate < $1.addedDate }
@@ -242,7 +240,25 @@ final class TransferStore {
         case .uploadSpeed: sorted = list.sorted { $0.uploadRate > $1.uploadRate }
         case .ratio: sorted = list.sorted { $0.ratio < $1.ratio }
         }
-        return sortAscending ? sorted : sorted.reversed()
+        return settings.sortAscending ? sorted : sorted.reversed()
+    }
+
+    /// Whether rows can be dragged to reorder the queue: only while the list shows queue order.
+    var canReorder: Bool {
+        settings.sort == .queue && settings.sortAscending && searchText.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// Reorders the queue after rows were dragged in the (possibly filtered) list.
+    func moveVisible(from source: IndexSet, to destination: Int) {
+        var visible = visibleTransfers.map(\.id)
+        visible.move(fromOffsets: source, toOffset: destination)
+        // Hidden transfers keep their places; the visible ones fill their own slots in the new order.
+        let shown = Set(visible)
+        var next = visible.makeIterator()
+        let order = transfers.map { shown.contains($0.id) ? next.next()! : $0.id }
+        transfers = order.compactMap { id in transfers.first { $0.id == id } }
+        if DemoMode.isEnabled { return }
+        session?.setQueueOrder(order)
     }
 
     func count(for filter: TransferFilter) -> Int { transfers.filter(filter.matches).count }
@@ -411,9 +427,14 @@ final class TransferStore {
         NSWorkspace.shared.activateFileViewerSelecting(urls)
     }
 
+    /// The transfer's file or folder, if any of it is on disk yet.
+    func existingContentURL(_ id: InfoHash) -> URL? {
+        guard let url = transfers.first(where: { $0.id == id })?.contentURL, FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return url
+    }
+
     func openContent(_ id: InfoHash) {
-        guard let t = transfers.first(where: { $0.id == id }), let url = t.contentURL, FileManager.default.fileExists(atPath: url.path) else { return }
-        NSWorkspace.shared.open(url)
+        if let url = existingContentURL(id) { NSWorkspace.shared.open(url) }
     }
 
     func copyMagnetLinks(_ ids: [InfoHash]? = nil) {

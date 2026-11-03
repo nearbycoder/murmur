@@ -11,7 +11,7 @@ struct MurmurApp: App {
         Window("Murmur", id: "main") {
             ContentView()
                 .environment(store)
-                .frame(minWidth: 780, minHeight: 460)
+                .frame(minWidth: 940, minHeight: 480)
         }
         .defaultSize(width: 1120, height: 700)
         .windowToolbarStyle(.unified)
@@ -62,6 +62,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    /// Right-clicking the Dock icon: quick controls and what's downloading.
+    @MainActor
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        let store = TransferStore.shared
+        let menu = NSMenu()
+        let downloading = store.transfers.filter { $0.state == .downloading || $0.state == .fetchingMetadata }
+        for t in downloading.prefix(6) {
+            let title = t.hasMetadata ? "\(t.name) — \(Format.percent(t.displayProgress))" : t.name
+            let item = ClosureMenuItem(title: title) {
+                store.filter = .all
+                store.selection = [t.id]
+                store.openMainWindow?()
+                NSApp.activate()
+            }
+            menu.addItem(item)
+        }
+        if !downloading.isEmpty { menu.addItem(.separator()) }
+        menu.addItem(ClosureMenuItem(title: "Add Magnet Link…") {
+            store.openMainWindow?()
+            NSApp.activate()
+            store.presentMagnetSheet()
+        })
+        menu.addItem(.separator())
+        menu.addItem(ClosureMenuItem(title: "Resume All") { store.resumeAll() })
+        menu.addItem(ClosureMenuItem(title: "Pause All") { store.pauseAll() })
+        let slow = ClosureMenuItem(title: "Slow Mode") { store.settings.slowMode.toggle() }
+        slow.state = store.settings.slowMode ? .on : .off
+        menu.addItem(slow)
+        return menu
+    }
+
     @MainActor
     func applicationDidBecomeActive(_ notification: Notification) {
         TransferStore.shared.checkClipboard()
@@ -75,6 +106,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         return .terminateLater
     }
+}
+
+/// An AppKit menu item that runs a closure, for menus built in code.
+final class ClosureMenuItem: NSMenuItem {
+    private let handler: @MainActor () -> Void
+
+    init(title: String, handler: @escaping @MainActor () -> Void) {
+        self.handler = handler
+        super.init(title: title, action: #selector(run), keyEquivalent: "")
+        target = self
+    }
+
+    required init(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    @MainActor @objc private func run() { handler() }
 }
 
 struct MurmurCommands: Commands {
@@ -136,6 +182,7 @@ struct MurmurCommands: Commands {
                 Button(filter.title) { store.filter = filter }
                     .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
             }
+            Menu("Sort By") { SortMenuContent(settings: settings) }
             Divider()
             Button(store.inspectorVisible ? "Hide Inspector" : "Show Inspector") { store.inspectorVisible.toggle() }
                 .keyboardShortcut("i", modifiers: [.command, .option])

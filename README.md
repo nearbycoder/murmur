@@ -30,11 +30,11 @@ Click a magnet link, pick the files you want, and watch the swarm do the rest. N
 - **Encrypted connections.** BitTorrent protocol encryption (MSE/PE) is on by default, so your provider can't single out torrent traffic. Prefer it, require it, or turn it off.
 - **A real inspector.** Speed graphs, a piece map, connected peers with their client, progress and speeds, and the status of every tracker.
 - **Speed limits and Slow Mode.** Global and per-transfer limits, plus a tortoise button (⇧⌘T) for alternative limits that can switch on by itself on a schedule (say, weekdays 9 to 5).
-- **Queue and seeding rules.** Limit simultaneous downloads, stop seeding at a ratio globally or per transfer, move transfers up and down the queue, and move finished downloads to another folder automatically.
+- **Queue and seeding rules.** Drag transfers to reorder the queue, limit simultaneous downloads, stop seeding at a ratio globally or per transfer, and move finished downloads to another folder automatically. Sort the list by name, size, progress, speed, ratio or date added.
 - **VPN binding.** Bind to an interface such as your VPN's `utun`, and Murmur stops transferring whenever it disconnects.
 - **Create torrents** from any file or folder, with your trackers, and start seeding at once.
-- **At home on the Mac.** A menu bar extra with live speeds, Dock badge and progress, notifications with *Show in Finder*, Shortcuts actions (add a magnet, pause or resume all, toggle Slow Mode), a watch folder, keep-awake while downloading, and full keyboard control.
-- **Quick Look and statistics.** Preview downloaded files from the inspector, and click the speeds in the status bar for session and all-time totals.
+- **At home on the Mac.** A menu bar extra with live speeds, Dock badge, progress and a Dock menu, notifications with *Show in Finder*, Shortcuts actions (add a magnet, pause or resume all, toggle Slow Mode), a watch folder, keep-awake while downloading, and full keyboard control.
+- **Quick Look and statistics.** Press Space to preview a transfer, as in Finder, or preview single files from the inspector. Click the speeds in the status bar for session and all-time totals.
 - **Resumes where it left off.** Progress is saved continuously and checked against your files on launch, so nothing is downloaded twice.
 
 <table>
@@ -56,6 +56,7 @@ Click a magnet link, pick the files you want, and watch the swarm do the rest. N
 | Key | Action |
 | --- | --- |
 | ⌘O | Open a torrent file |
+| Space | Quick Look the selection |
 | ⌘U | Add a magnet link |
 | ⌘N | Create a torrent |
 | ⌥⌘P / ⌥⌘R | Pause / resume the selection |
@@ -112,7 +113,7 @@ You'll need Xcode 26 or later. Run the tests with `swift test --package-path Pac
 
 `./Scripts/release.sh` archives, signs with Developer ID, notarizes and packages a DMG; `./Scripts/release.sh publish` also tags the version and creates a GitHub release. Bump the version in `Resources/Info.plist` first.
 
-Screenshots come from a demo mode with sample transfers and no networking: `./Scripts/shoot.sh overview out.png [light|dark]` (scenes: `overview`, `files`, `peers`, `trackers`, `empty`). `Scripts/make-og.swift`, `Scripts/render-icon.swift` and `Scripts/make-dmg-background.swift` render the social card, the icon PNGs and the installer background.
+Screenshots come from a demo mode with sample transfers and no networking: `./Scripts/shoot.sh overview out.png [light|dark]` (scenes: `overview`, `files`, `peers`, `trackers`, `noselect`, `empty`, `settings-general`, `settings-transfers`, `settings-network`; set `WIDTH` and `HEIGHT` for other window sizes). `Scripts/make-og.swift`, `Scripts/render-icon.swift` and `Scripts/make-dmg-background.swift` render the social card, the icon PNGs and the installer background.
 
 ### Project layout
 

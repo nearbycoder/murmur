@@ -87,7 +87,9 @@ enum DemoMode {
 
     private static func layOutWindow() {
         guard let window = NSApp.windows.first(where: { $0.canBecomeMain }), let screen = window.screen ?? NSScreen.main else { return }
-        let size = NSSize(width: 1240, height: 760)
+        let width = UserDefaults.standard.double(forKey: "demoWindowWidth")
+        let height = UserDefaults.standard.double(forKey: "demoWindowHeight")
+        let size = NSSize(width: width > 0 ? width : 1240, height: height > 0 ? height : 760)
         let frame = screen.visibleFrame
         window.setFrame(NSRect(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2, width: size.width, height: size.height), display: true)
         window.makeKeyAndOrderFront(nil)

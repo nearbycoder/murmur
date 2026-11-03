@@ -14,6 +14,15 @@ struct SettingsView: View {
         }
         .frame(width: 540)
         .fixedSize(horizontal: false, vertical: true)
+        .onAppear(perform: clearFocus)
+        .onChange(of: tab) { clearFocus() }
+    }
+
+    /// AppKit focuses the first text field when a pane appears, which looks like a stray selection.
+    private func clearFocus() {
+        DispatchQueue.main.async {
+            if let window = NSApp.keyWindow, window.firstResponder is NSText { window.makeFirstResponder(nil) }
+        }
     }
 }
 
@@ -181,18 +190,19 @@ private struct TransferSettings: View {
                 }
             }
             Section("Queue and seeding") {
-                Stepper(value: $settings.maxActiveDownloads, in: 0...50) {
-                    LabeledContent("Download at once", value: settings.maxActiveDownloads == 0 ? "No limit" : "\(settings.maxActiveDownloads)")
-                }
+                StepperRow(title: "Download at once", value: $settings.maxActiveDownloads, range: 0...50,
+                           text: settings.maxActiveDownloads == 0 ? "No limit" : "\(settings.maxActiveDownloads)")
                 Toggle("Stop seeding at ratio", isOn: $settings.stopAtRatio)
                 if settings.stopAtRatio {
-                    Stepper(value: $settings.ratioLimit, in: 0.1...20, step: 0.1) {
-                        LabeledContent("Ratio", value: Format.ratio(settings.ratioLimit))
+                    LabeledContent("Ratio") {
+                        HStack(spacing: 6) {
+                            Text(Format.ratio(settings.ratioLimit)).monospacedDigit()
+                            Stepper("Ratio", value: $settings.ratioLimit, in: 0.1...20, step: 0.1).labelsHidden()
+                        }
                     }
                 }
-                Stepper(value: $settings.maxPeersPerTorrent, in: 10...300, step: 10) {
-                    LabeledContent("Peers per transfer", value: "\(settings.maxPeersPerTorrent)")
-                }
+                StepperRow(title: "Peers per transfer", value: $settings.maxPeersPerTorrent, range: 10...300, step: 10,
+                           text: "\(settings.maxPeersPerTorrent)")
             }
         }
         .formStyle(.grouped)
@@ -313,16 +323,38 @@ private struct NetworkSettings: View {
     }
 }
 
+/// A speed limit: the switch turns it on, the field sets it.
 private struct LimitRow: View {
     let title: String
     @Binding var enabled: Bool
     @Binding var value: Int
 
     var body: some View {
-        LabeledContent {
-            KBField(value: $value).disabled(!enabled)
-        } label: {
-            Toggle(title, isOn: $enabled)
+        LabeledContent(title) {
+            HStack(spacing: 12) {
+                KBField(value: $value).disabled(!enabled)
+                Toggle(title, isOn: $enabled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+            }
+        }
+    }
+}
+
+/// A value shown next to its stepper, on the trailing side like the other controls.
+private struct StepperRow: View {
+    let title: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    var step = 1
+    let text: String
+
+    var body: some View {
+        LabeledContent(title) {
+            HStack(spacing: 6) {
+                Text(text).monospacedDigit()
+                Stepper(title, value: $value, in: range, step: step).labelsHidden()
+            }
         }
     }
 }

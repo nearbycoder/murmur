@@ -459,6 +459,19 @@ public final class Session: @unchecked Sendable {
         }
     }
 
+    /// Sets the whole queue order: the listed torrents first, in that order, then any others as they were.
+    public func setQueueOrder(_ ids: [InfoHash]) {
+        queue.async { [self] in
+            let listed = ids.compactMap { torrents[$0] }
+            let rest = torrents.values.filter { !ids.contains($0.infoHash) }.sorted { $0.queuePosition < $1.queuePosition }
+            for (i, t) in (listed + rest).enumerated() where t.queuePosition != i {
+                t.queuePosition = i
+                t.resumeDirty = true
+            }
+            applyQueue()
+        }
+    }
+
     public func move(_ id: InfoHash, to directory: URL, completion: @escaping (Error?) -> Void) {
         queue.async { [self] in
             guard let torrent = torrents[id] else { DispatchQueue.main.async { completion(SessionError.notFound) }; return }

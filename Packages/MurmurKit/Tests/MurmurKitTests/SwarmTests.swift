@@ -25,6 +25,30 @@ struct SwarmTests {
         return condition()
     }
 
+    @Test func queueOrderIsSetAndRestored() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("murmur-queue-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        var torrents: [Data] = []
+        for name in ["a", "b", "c"] {
+            let file = root.appendingPathComponent("\(name).bin")
+            try Data((0..<40_000).map { _ in UInt8.random(in: 0...255) }).write(to: file)
+            torrents.append(try TorrentCreator.create(from: file))
+        }
+        var session = makeSession("q", root: root)
+        session.start()
+        let ids = try torrents.map { try session.addTorrent(data: $0, paused: true) }
+        #expect(session.statuses().map(\.id) == ids)
+        session.setQueueOrder([ids[2], ids[0]])
+        #expect(await waitUntil(5) { session.statuses().map(\.id) == [ids[2], ids[0], ids[1]] })
+        await withCheckedContinuation { c in session.shutdown { c.resume() } }
+
+        session = makeSession("q", root: root)
+        session.start()
+        #expect(await waitUntil(5) { session.statuses().map(\.id) == [ids[2], ids[0], ids[1]] })
+        await withCheckedContinuation { c in session.shutdown { c.resume() } }
+    }
+
     @Test func magnetDownloadFromLocalSeed() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("murmur-swarm-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }

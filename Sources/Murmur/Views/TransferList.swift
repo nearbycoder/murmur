@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TransferListView: View {
     @Environment(TransferStore.self) private var store
+    @State private var quickLookURL: URL?
 
     var body: some View {
         @Bindable var store = store
@@ -23,6 +24,7 @@ struct TransferListView: View {
                             .tag(status.id)
                             .listRowSeparator(.visible)
                     }
+                    .onMove(perform: store.canReorder ? { store.moveVisible(from: $0, to: $1) } : nil)
                 }
                 .listStyle(.inset)
                 .alternatingRowBackgrounds(.disabled)
@@ -32,6 +34,14 @@ struct TransferListView: View {
                     if let id = ids.first { store.openContent(id) }
                 }
                 .onDeleteCommand { store.requestRemove() }
+                .onKeyPress(.space) {
+                    // Space previews the selection with Quick Look, as in Finder.
+                    let urls = store.selectedTransfers.compactMap { store.existingContentURL($0.id) }
+                    guard let first = urls.first else { return .ignored }
+                    quickLookURL = quickLookURL == nil ? first : nil
+                    return .handled
+                }
+                .quickLookPreview($quickLookURL, in: store.selectedTransfers.compactMap { store.existingContentURL($0.id) })
             }
         }
         .navigationTitle(store.filter.title)
@@ -47,6 +57,19 @@ struct TransferListView: View {
     private var subtitle: String {
         let count = store.transfers.filter(store.filter.matches).count
         return count == 0 ? "No transfers" : "\(count) transfer\(count == 1 ? "" : "s")"
+    }
+}
+
+/// Sort choices, shared by the toolbar and the View menu.
+struct SortMenuContent: View {
+    @Bindable var settings: AppSettings
+
+    var body: some View {
+        Picker("Sort By", selection: $settings.sort) {
+            ForEach(TransferSort.allCases) { Text($0.title).tag($0) }
+        }
+        .pickerStyle(.inline)
+        Toggle("Reverse Order", isOn: Binding(get: { !settings.sortAscending }, set: { settings.sortAscending = !$0 }))
     }
 }
 
@@ -123,13 +146,14 @@ struct TransferRow: View {
             Button {
                 store.togglePause([status.id])
             } label: {
-                Image(systemName: isStopped ? "play.fill" : "pause.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .frame(width: 26, height: 26)
+                Image(systemName: isStopped ? "play.circle.fill" : "pause.circle.fill")
+                    .font(.system(size: 22))
+                    .symbolRenderingMode(.hierarchical)
+                    // Primary and secondary follow the row's selection highlight; an accent colour would vanish into it.
+                    .foregroundStyle(hovering ? .primary : .secondary)
+                    .contentTransition(.symbolEffect(.replace))
             }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .opacity(hovering ? 1 : 0)
+            .buttonStyle(.borderless)
             .help(isStopped ? "Resume" : "Pause")
             .accessibilityLabel(isStopped ? "Resume" : "Pause")
         }
@@ -152,20 +176,26 @@ struct TransferRow: View {
             .opacity(status.state == .seeding || status.isActive || status.state == .error || status.state == .paused ? 1 : 0.9)
     }
 
+    /// Download speed while downloading (even when stalled), upload speed while seeding, and either whenever it's moving.
     @ViewBuilder
     private var rates: some View {
-        if status.state == .downloading || status.state == .seeding || status.state == .fetchingMetadata {
+        let showDown = status.state == .downloading || status.downloadRate > 0
+        let showUp = status.state == .seeding || status.uploadRate > 0
+        if showDown || showUp {
             HStack(spacing: 10) {
-                if status.state != .seeding {
+                if showDown {
                     Label(status.downloadRate.speed, systemImage: "arrow.down")
                         .foregroundStyle(status.downloadRate > 0 ? Color.accentColor : .secondary)
                 }
-                Label(status.uploadRate.speed, systemImage: "arrow.up")
-                    .foregroundStyle(status.uploadRate > 0 ? Color.green : .secondary)
+                if showUp {
+                    Label(status.uploadRate.speed, systemImage: "arrow.up")
+                        .foregroundStyle(status.uploadRate > 0 ? Color.green : .secondary)
+                }
             }
             .labelStyle(CompactLabelStyle())
             .font(.caption.weight(.medium))
             .monospacedDigit()
+            .fixedSize() // the name truncates first
         }
     }
 }
@@ -249,24 +279,42 @@ struct StatusFooter: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .fixedSize()
             .help("Statistics")
             .popover(isPresented: $showStatistics, arrowEdge: .top) { StatisticsView() }
-            Divider().frame(height: 12)
-            Text("\(stats.connectedPeers) peer\(stats.connectedPeers == 1 ? "" : "s")")
-            if store.settings.enableDHT {
-                Text("DHT \(stats.dhtNodes) node\(stats.dhtNodes == 1 ? "" : "s")")
+            // Drop the counts, least useful first, rather than squeezing them into dots.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 14) { Divider().frame(height: 12); peerCount; dhtCount }
+                HStack(spacing: 14) { Divider().frame(height: 12); peerCount }
+                Color.clear.frame(width: 0, height: 0)
             }
-            Spacer()
-            portStatus
+            Spacer(minLength: 8)
+            portStatus.layoutPriority(1)
         }
         .labelStyle(CompactLabelStyle())
         .font(.caption)
         .monospacedDigit()
         .foregroundStyle(.secondary)
+        .lineLimit(1)
         .padding(.horizontal, 16)
+        // The bar must never ask for more width than the column has: when it did, the split view
+        // renegotiated its column widths in a loop until AppKit gave up (a crash in narrow windows).
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+        .clipped()
         .frame(height: 28)
         .background(.bar)
         .overlay(alignment: .top) { Divider() }
+    }
+
+    private var peerCount: some View {
+        Text("\(store.stats.connectedPeers) peer\(store.stats.connectedPeers == 1 ? "" : "s")").fixedSize()
+    }
+
+    @ViewBuilder
+    private var dhtCount: some View {
+        if store.settings.enableDHT {
+            Text("DHT \(store.stats.dhtNodes) node\(store.stats.dhtNodes == 1 ? "" : "s")").fixedSize()
+        }
     }
 
     @ViewBuilder
@@ -285,6 +333,7 @@ struct StatusFooter: View {
     private var portText: String {
         let stats = store.stats
         if let mapping = stats.portMapping, mapping.hasPrefix("Waiting") { return mapping }
+        if !stats.isListening { return "Not listening" }
         var text = "Port \(stats.listenPort)"
         if let mapping = stats.portMapping { text += " · \(mapping)" }
         return text
@@ -303,6 +352,7 @@ private struct ClipboardBanner: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Magnet link on the clipboard")
                     .font(.callout.weight(.medium))
+                    .lineLimit(1)
                 Text(magnet.displayName ?? magnet.infoHash.hex)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -323,6 +373,7 @@ private struct ClipboardBanner: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
+        .frame(minWidth: 0, maxWidth: .infinity) // see StatusFooter: never wider than the column
         .glassEffect(.regular, in: .rect(cornerRadius: 18))
         .padding(.horizontal, 16)
         .transition(.move(edge: .bottom).combined(with: .opacity))

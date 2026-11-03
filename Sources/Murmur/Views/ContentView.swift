@@ -18,6 +18,7 @@ struct ContentView: View {
             TransferListView()
                 .inspector(isPresented: store.transfers.isEmpty ? .constant(false) : $store.inspectorVisible) {
                     InspectorView()
+                        .frame(minWidth: 0, maxWidth: .infinity) // the column width rules, never the content (see StatusFooter)
                         .inspectorColumnWidth(min: 320, ideal: 360, max: 480)
                 }
         }
@@ -75,6 +76,15 @@ struct ContentView: View {
             }
             .help("Add a torrent file (hold for more options)")
         }
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                SortMenuContent(settings: store.settings)
+            } label: {
+                Label("Sort", systemImage: "arrow.up.arrow.down")
+            }
+            .help("Sort transfers by \(store.settings.sort.title.lowercased())")
+        }
+        ToolbarSpacer(.fixed, placement: .primaryAction)
         ToolbarItemGroup(placement: .primaryAction) {
             let selected = store.selectedTransfers
             let canPause = selected.contains { ![.paused, .finished, .error].contains($0.state) }
@@ -188,6 +198,7 @@ private struct SpeedCard: View {
             }
         }
         .padding(12)
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading) // never wider than the sidebar (see StatusFooter)
         .glassEffect(.regular, in: .rect(cornerRadius: 16))
     }
 
@@ -199,6 +210,8 @@ private struct SpeedCard: View {
             Text(value.speed)
                 .font(.callout.weight(.medium))
                 .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
                 .contentTransition(.numericText())
         }
     }
