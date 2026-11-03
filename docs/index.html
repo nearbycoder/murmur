@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Murmur: a native torrent client for macOS</title>
+  <meta name="description" content="Murmur is a free, open source BitTorrent client for macOS, written from scratch in Swift. Magnet links, DHT, peer exchange, file selection, speed limits, VPN binding and a Liquid Glass interface.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f5f3fb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16141f" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="assets/icon-256.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="canonical" href="https://nearbycoder.github.io/murmur/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Murmur">
+  <meta property="og:url" content="https://nearbycoder.github.io/murmur/">
+  <meta property="og:title" content="Murmur: a native torrent client for macOS">
+  <meta property="og:description" content="Free and open source. Magnet links, DHT, peer exchange, file selection and speed limits, in a Liquid Glass app written in Swift.">
+  <meta property="og:image" content="https://nearbycoder.github.io/murmur/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Murmur icon beside its transfer list with downloads in progress">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://nearbycoder.github.io/murmur/assets/og.png">
+  <style>
+    :root {
+      --bg: #f5f3fb;
+      --surface: #ffffff;
+      --ink: #1f1c2b;
+      --muted: #6a6578;
+      --line: #e6e2f0;
+      --kbd: #eeebf6;
+      --accent: #5b4be0;
+      --coral: #ef6f68;
+      --button: #1f1c2b;
+      --button-ink: #ffffff;
+      --wall: linear-gradient(160deg, #5546dc 0%, #8a4fb8 52%, #f6736c 100%);
+      --shadow: 0 1px 2px rgba(40, 20, 80, 0.06), 0 14px 36px rgba(40, 20, 80, 0.10);
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16141f;
+        --surface: #1e1b2a;
+        --ink: #eeebf6;
+        --muted: #a39db3;
+        --line: #2d2940;
+        --kbd: #29253a;
+        --accent: #9d90ff;
+        --button: #eeebf6;
+        --button-ink: #16141f;
+        --wall: linear-gradient(160deg, #2e2780 0%, #563179 52%, #9a4a63 100%);
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 44px rgba(0, 0, 0, 0.4);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    img { display: block; max-width: 100%; height: auto; }
+    .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+
+    header.top .wrap { display: flex; align-items: center; gap: 28px; height: 68px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; text-decoration: none; }
+    .brand img { width: 30px; height: 30px; }
+    header.top nav { display: flex; gap: 24px; margin-left: auto; font-size: 15px; }
+    header.top nav a { color: var(--muted); text-decoration: none; }
+    header.top nav a:hover { color: var(--ink); }
+
+    .button { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 22px; border-radius: 12px;
+      background: var(--button); color: var(--button-ink); font-weight: 500; font-size: 16px; text-decoration: none; transition: transform .15s ease; }
+    .button:hover { transform: translateY(-1px); }
+    .button svg { width: 17px; height: 17px; }
+    .button.small { height: 34px; padding: 0 14px; font-size: 14px; border-radius: 9px; }
+
+    .hero { text-align: center; padding: 60px 0 44px; position: relative; }
+    .hero .icon { width: 112px; height: 112px; margin: 0 auto 20px; filter: drop-shadow(0 12px 24px rgba(91, 75, 224, 0.25)); }
+    h1 { font-size: clamp(40px, 6.2vw, 66px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 700; margin: 0 auto 18px; max-width: 800px; text-wrap: balance; }
+    h1 span { display: block; background: linear-gradient(90deg, var(--accent), var(--coral)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lede { font-size: 20px; color: var(--muted); max-width: 620px; margin: 0 auto 30px; text-wrap: pretty; }
+    .actions { display: flex; justify-content: center; align-items: center; gap: 22px; flex-wrap: wrap; }
+    .actions .link { color: var(--muted); text-decoration: none; }
+    .actions .link:hover { color: var(--ink); }
+    .fine { margin-top: 16px; font-size: 14px; color: var(--muted); }
+    kbd { font: 500 0.84em var(--font); padding: 1px 7px; border-radius: 6px; background: var(--kbd); border: 1px solid var(--line); white-space: nowrap; }
+    code { font: 0.88em var(--mono); background: var(--kbd); padding: 1px 5px; border-radius: 5px; }
+
+    .wall { background: var(--wall); border-radius: 26px; padding: clamp(14px, 3.6vw, 44px); position: relative; overflow: hidden; }
+    .wall canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .shot { position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,.12), 0 30px 60px rgba(20, 10, 50, 0.35); }
+
+    section { padding: 104px 0 0; }
+    .head { text-align: center; max-width: 660px; margin: 0 auto 44px; }
+    h2 { font-size: clamp(30px, 4vw, 42px); letter-spacing: -0.028em; line-height: 1.12; font-weight: 650; margin: 0 0 12px; text-wrap: balance; }
+    .head p { color: var(--muted); margin: 0; font-size: 18px; text-wrap: pretty; }
+
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .feature { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px 22px 24px; }
+    .feature .ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 14px; background: var(--tint); color: var(--tone); }
+    .feature .ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .feature h3 { font-size: 17px; font-weight: 600; margin: 0 0 6px; }
+    .feature p { margin: 0; color: var(--muted); font-size: 15.5px; }
+    .indigo { --tint: #e7e4fb; --tone: #4f3fd1; }
+    .coral  { --tint: #fde5e3; --tone: #c8433c; }
+    .violet { --tint: #f0e3f8; --tone: #8a3fb4; }
+    .teal   { --tint: #dcf0ec; --tone: #1d7f70; }
+    .amber  { --tint: #f9ecd6; --tone: #a8650c; }
+    .sky    { --tint: #dfeaf8; --tone: #2f66b3; }
+    @media (prefers-color-scheme: dark) {
+      .indigo { --tint: #27234a; --tone: #aaa0ff; }
+      .coral  { --tint: #3b2326; --tone: #f59a94; }
+      .violet { --tint: #33243f; --tone: #d3a3f0; }
+      .teal   { --tint: #1c3330; --tone: #7fd0c2; }
+      .amber  { --tint: #3a2f1f; --tone: #e6b56c; }
+      .sky    { --tint: #1f2b3b; --tone: #8db5ea; }
+    }
+
+    .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .gallery figure { margin: 0; }
+    .gallery .frame { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); background: var(--surface); }
+    .gallery .frame img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; object-position: right top; }
+    .gallery figcaption { margin-top: 12px; font-size: 15px; color: var(--muted); }
+    .gallery figcaption b { color: var(--ink); font-weight: 600; }
+
+    .engine { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+    .engine p { color: var(--muted); margin: 0 0 16px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 8px 24px; }
+    table { width: 100%; border-collapse: collapse; font-size: 15.5px; }
+    td { padding: 11px 0; border-top: 1px solid var(--line); vertical-align: top; }
+    tr:first-child td { border-top: 0; }
+    td:first-child { width: 108px; white-space: nowrap; font: 500 13.5px var(--mono); color: var(--accent); padding-top: 13px; }
+    td:last-child { color: var(--muted); }
+    td b { color: var(--ink); font-weight: 600; }
+
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: step; }
+    .step { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
+    .step::before { counter-increment: step; content: counter(step); display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--coral)); color: #fff; font-weight: 600; font-size: 15px; margin-bottom: 12px; }
+    .step h3 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }
+    .step p { margin: 0; color: var(--muted); font-size: 15.5px; }
+
+    .faq { max-width: 780px; margin: 0 auto; }
+    details { border-bottom: 1px solid var(--line); }
+    summary { cursor: pointer; list-style: none; padding: 18px 0; font-weight: 500; font-size: 17px; display: flex; justify-content: space-between; gap: 16px; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; color: var(--muted); font-size: 20px; line-height: 1; }
+    details[open] summary::after { content: "−"; }
+    details p { margin: 0 0 20px; color: var(--muted); }
+
+    .closing { margin-top: 112px; text-align: center; padding: 64px 24px; color: #fff; }
+    .closing img { width: 84px; height: 84px; margin: 0 auto 16px; position: relative; }
+    .closing h2, .closing p, .closing .button { position: relative; }
+    .closing p { margin: 0 0 26px; opacity: 0.85; }
+    .closing .button { background: #fff; color: #1f1c2b; }
+
+    footer { padding: 36px 0 52px; font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    footer a { color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .features, .gallery, .steps { grid-template-columns: 1fr 1fr; }
+      .engine { grid-template-columns: 1fr; gap: 24px; }
+    }
+    @media (max-width: 600px) {
+      header.top nav { display: none; }
+      header.top .button { margin-left: auto; }
+      .hero { padding-top: 36px; }
+      .features, .gallery, .steps { grid-template-columns: 1fr; }
+      .card { padding: 4px 16px; }
+      td:first-child { width: 86px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="#"><img src="assets/icon-256.png" alt="">Murmur</a>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#engine">Engine</a>
+        <a href="#install">Install</a>
+        <a href="#faq">FAQ</a>
+        <a href="https://github.com/nearbycoder/murmur">GitHub</a>
+      </nav>
+      <a class="button small" href="https://github.com/nearbycoder/murmur/releases/latest/download/Murmur.dmg">Download</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="hero">
+      <img class="icon" src="assets/icon-256.png" alt="Murmur app icon" width="112" height="112">
+      <h1>Torrents that feel at home on your Mac.<span>Free and open source.</span></h1>
+      <p class="lede">Murmur is a native BitTorrent client written from scratch in Swift. Click a magnet link, choose the files you want, and watch the swarm do the rest.</p>
+      <div class="actions">
+        <a class="button" href="https://github.com/nearbycoder/murmur/releases/latest/download/Murmur.dmg">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.65zM14.1 5.86c.63-.77 1.06-1.83.94-2.89-.91.04-2.02.61-2.67 1.37-.58.67-1.1 1.76-.96 2.8 1.02.08 2.06-.52 2.69-1.28z"/></svg>
+          Download for Mac
+        </a>
+        <a class="link" href="https://github.com/nearbycoder/murmur">Source on GitHub →</a>
+      </div>
+      <p class="fine">macOS 26 or later · Apple silicon and Intel · Signed and notarized</p>
+    </div>
+
+    <div class="wall" id="hero-wall">
+      <canvas id="flock" aria-hidden="true"></canvas>
+      <div class="shot">
+        <picture>
+          <source srcset="screenshots/overview-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="screenshots/overview-light.png" width="1240" height="760" alt="Murmur's main window: a list of downloads and seeds with progress bars, and an inspector showing a speed graph and piece map">
+        </picture>
+      </div>
+    </div>
+
+    <section id="features">
+      <div class="head">
+        <h2>Everything a torrent client should do</h2>
+        <p>And nothing it shouldn't: no ads, no bundled offers, no account, no analytics. Just a fast engine and an app that follows the Mac's conventions.</p>
+      </div>
+      <div class="features">
+        <div class="feature indigo">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg></div>
+          <h3>Magnet links</h3>
+          <p>Click one in your browser, paste one, or let Murmur spot it on the clipboard. It fetches the file list from peers and starts right away.</p>
+        </div>
+        <div class="feature coral">
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 3 3 5-6"/></svg></div>
+          <h3>Pick your files</h3>
+          <p>Choose exactly what to download before you start or at any time, set priorities, and download in order to preview video while it arrives.</p>
+        </div>
+        <div class="feature violet">
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="4" r="1.2"/><circle cx="12" cy="20" r="1.2"/><path d="M8 11l8-4M8 13l8 4"/></svg></div>
+          <h3>Finds peers anywhere</h3>
+          <p>HTTP and UDP trackers, the DHT for trackerless torrents, and peer exchange. Port mapping with NAT-PMP or UPnP lets others reach you.</p>
+        </div>
+        <div class="feature teal">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 17c2-1 3-6 5-6s3 4 5 4 3-8 5-8 2 3 3 4"/></svg></div>
+          <h3>Live detail</h3>
+          <p>Speed graphs, a piece map, every connected peer with its client and progress, and the status of each tracker in the inspector.</p>
+        </div>
+        <div class="feature amber">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M5 15a7 7 0 0 1 14 0"/><path d="M12 15l3-4"/><path d="M4 19h16"/></svg></div>
+          <h3>Speed limits and Slow Mode</h3>
+          <p>Cap download and upload speed, or tap the tortoise to switch to your alternative limits when you need the bandwidth back.</p>
+        </div>
+        <div class="feature sky">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/><path d="M9.5 12.5h5M12 10v5"/></svg></div>
+          <h3>VPN binding</h3>
+          <p>Bind Murmur to your VPN's interface and it stops transferring the moment the VPN drops, then picks up again when it returns.</p>
+        </div>
+        <div class="feature violet">
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div>
+          <h3>Truly native</h3>
+          <p>SwiftUI with Liquid Glass, a menu bar extra, Dock progress, notifications, Shortcuts actions, Quick Look-friendly files and full keyboard control.</p>
+        </div>
+        <div class="feature indigo">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></div>
+          <h3>Queue and seeding</h3>
+          <p>Limit how many download at once, stop seeding at a ratio (globally or per transfer), and pick up exactly where you left off after a restart.</p>
+        </div>
+        <div class="feature coral">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg></div>
+          <h3>Create torrents</h3>
+          <p>Share a file or folder: Murmur hashes it, writes the .torrent with your trackers, and starts seeding it straight away.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="gallery">
+      <div class="head">
+        <h2>Look inside any transfer</h2>
+        <p>The inspector keeps everything one click away, without a maze of tabs and columns.</p>
+      </div>
+      <div class="gallery">
+        <figure>
+          <div class="frame"><picture><source srcset="screenshots/files-dark.png" media="(prefers-color-scheme: dark)"><img src="screenshots/files-light.png" alt="The Files tab with checkboxes beside each file and folder" loading="lazy"></picture></div>
+          <figcaption><b>Files.</b> Check off what you want, change priorities, and see each file's progress.</figcaption>
+        </figure>
+        <figure>
+          <div class="frame"><picture><source srcset="screenshots/peers-dark.png" media="(prefers-color-scheme: dark)"><img src="screenshots/peers-light.png" alt="The Peers tab listing connected clients with their speeds" loading="lazy"></picture></div>
+          <figcaption><b>Peers.</b> Who you're trading with, what client they run, and how fast.</figcaption>
+        </figure>
+        <figure>
+          <div class="frame"><img src="screenshots/trackers-dark.png" alt="The Trackers tab with the status of each tracker, the DHT and peer exchange" loading="lazy"></div>
+          <figcaption><b>Trackers.</b> Seeds and leechers per tracker, plus the DHT and peer exchange.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="engine">
+      <div class="engine">
+        <div>
+          <h2>A BitTorrent engine written in Swift</h2>
+          <p>Murmur doesn't wrap libtorrent or Transmission. Its engine, MurmurKit, is a from-scratch implementation built on Network.framework and CryptoKit, with no third-party dependencies.</p>
+          <p>It's tested against real swarms and other clients: it downloads Linux ISOs at full line speed, fetches trackerless magnet links through the DHT alone, and trades data both ways with aria2. Every piece is checked against its SHA-1 hash before it's written.</p>
+          <p>The engine is a standalone Swift package with a command-line client, so you can use it in your own projects too.</p>
+        </div>
+        <div class="card">
+          <table>
+            <tr><td>BEP 3</td><td><b>Peer wire protocol</b>, rarest-first piece picking, endgame, tit-for-tat choking</td></tr>
+            <tr><td>BEP 5</td><td><b>DHT</b>: finds peers without trackers and serves other nodes</td></tr>
+            <tr><td>BEP 9 · 10</td><td><b>Magnet links</b> and metadata exchange over the extension protocol</td></tr>
+            <tr><td>BEP 11</td><td><b>Peer exchange</b> (PEX)</td></tr>
+            <tr><td>BEP 12 · 15</td><td><b>Multiple trackers</b>, HTTP(S) and UDP</td></tr>
+            <tr><td>BEP 23 · 7</td><td><b>Compact peer lists</b>, IPv4 and IPv6</td></tr>
+            <tr><td>BEP 47</td><td><b>Padding files</b> in hybrid torrents</td></tr>
+            <tr><td>RFC 6886</td><td><b>NAT-PMP</b>, with <b>UPnP IGD</b> as a fallback</td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="head">
+        <h2>Get started in a minute</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <h3>Download</h3>
+          <p>Open <a href="https://github.com/nearbycoder/murmur/releases/latest/download/Murmur.dmg">Murmur.dmg</a> and drag Murmur into Applications. It's notarized by Apple, so it opens without warnings.</p>
+        </div>
+        <div class="step">
+          <h3>Make it the default</h3>
+          <p>On first launch, click <b>Make Default</b> so magnet links and .torrent files open in Murmur.</p>
+        </div>
+        <div class="step">
+          <h3>Click a magnet link</h3>
+          <p>Or drop a .torrent file on the window. Downloads go to your Downloads folder unless you choose another.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="head">
+        <h2>Questions</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>Is it free?</summary>
+          <p>Yes. It's open source under the MIT License, with no ads, trial, account or in-app purchases.</p>
+        </details>
+        <details>
+          <summary>What should I use it for?</summary>
+          <p>BitTorrent is a great way to get large files that people share legally: Linux distributions, open movies, public domain books and audio, game updates and datasets. Please respect copyright where you live. Murmur doesn't include any search or content.</p>
+        </details>
+        <details>
+          <summary>Does Murmur collect any data?</summary>
+          <p>No. There's no analytics or telemetry. It talks only to the trackers, DHT nodes and peers of your torrents, and to your router to open its port.</p>
+        </details>
+        <details>
+          <summary>Why does macOS ask about my local network?</summary>
+          <p>Murmur asks your router to forward its listening port (with NAT-PMP or UPnP) so other peers can connect to you, which makes downloads faster. You can turn this off in <b>Settings → Network</b>.</p>
+        </details>
+        <details>
+          <summary>How do I keep it on my VPN?</summary>
+          <p>Connect your VPN, then pick its interface (usually starting with <code>utun</code>) in <b>Settings → Network → Network interface</b>. Murmur only transfers over that interface and pauses networking whenever it disappears.</p>
+        </details>
+        <details>
+          <summary>Does it support encryption, µTP or BitTorrent v2?</summary>
+          <p>Not yet. Murmur connects over plain TCP, which nearly every client accepts. Hybrid v1/v2 torrents work; v2-only torrents are on the roadmap, along with protocol encryption and µTP. Contributions are welcome.</p>
+        </details>
+        <details>
+          <summary>Which Macs does it support?</summary>
+          <p>macOS 26 or later, on Apple silicon and Intel. It's signed with a Developer ID and notarized by Apple.</p>
+        </details>
+      </div>
+    </section>
+
+    <div class="closing wall" id="closing-wall">
+      <canvas id="flock2" aria-hidden="true"></canvas>
+      <img src="assets/icon-256.png" alt="">
+      <h2>Join the murmuration</h2>
+      <p>Free, open source, and made for the Mac.</p>
+      <a class="button" href="https://github.com/nearbycoder/murmur/releases/latest/download/Murmur.dmg">Download Murmur</a>
+    </div>
+
+    <footer>
+      <span>© 2026 Josh Hamilton · <a href="https://github.com/nearbycoder/murmur/blob/main/LICENSE">MIT License</a></span>
+      <span><a href="https://github.com/nearbycoder/murmur">GitHub</a> · <a href="https://github.com/nearbycoder/murmur/releases">Releases</a> · <a href="https://github.com/nearbycoder/murmur/issues">Report an issue</a></span>
+    </footer>
+  </main>
+
+  <script>
+    // A murmuration of dots drifting behind the screenshot and the closing card.
+    (function () {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      function flock(canvas, count) {
+        const ctx = canvas.getContext('2d');
+        let w = 0, h = 0;
+        const birds = Array.from({ length: count }, (_, i) => ({ u: Math.random(), spread: Math.pow(Math.random(), 2), a: Math.random() * Math.PI * 2, s: 1 + Math.random() * 2.2, d: 0.6 + Math.random() * 0.8 }));
+        function resize() {
+          const r = canvas.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          w = r.width; h = r.height;
+          canvas.width = w * dpr; canvas.height = h * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        function frame(time) {
+          const t = time / 1000 * 0.3;
+          ctx.clearRect(0, 0, w, h);
+          const cx = w / 2, cy = h / 2, ax = w * 0.42, by = h * 0.36;
+          for (const b of birds) {
+            const s = b.u * Math.PI * 2 + t * 0.6;
+            const x = cx + ax * Math.sin(s) * (1 + 0.15 * Math.sin(t * 0.43));
+            const y = cy + by * Math.sin(2 * s + Math.sin(t * 0.7 + b.u * 6) * 0.25) * 0.55 + by * 0.3 * Math.cos(s + t * 0.31);
+            const r = (8 + 60 * b.spread) * (1 + 0.3 * Math.sin(t * b.d + b.a));
+            const px = x + r * Math.cos(b.a + t * b.d), py = y + r * Math.sin(b.a + t * b.d) * 0.6;
+            ctx.fillStyle = `rgba(255,255,255,${0.18 + 0.4 * (1 - b.spread)})`;
+            ctx.beginPath(); ctx.arc(px, py, b.s, 0, Math.PI * 2); ctx.fill();
+          }
+          if (!reduce) requestAnimationFrame(frame);
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        requestAnimationFrame(frame);
+      }
+      flock(document.getElementById('flock'), 260);
+      flock(document.getElementById('flock2'), 200);
+    })();
+  </script>
+</body>
+</html>

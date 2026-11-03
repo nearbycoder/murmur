@@ -1,0 +1,9 @@
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+.build/
+.swiftpm/
+Packages/MurmurKit/.build/
+docs/node_modules/

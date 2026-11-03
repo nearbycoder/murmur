@@ -1,0 +1,579 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		07529409872C9DA7F9431E9F /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 174461C5E9DCDEE2305BBEA1 /* Formatting.swift */; };
+		181456BD9ABEF61E3CC01407 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BABE1E5B7110CE5AF6941518 /* AppSettings.swift */; };
+		2D0A395EE68B61F555BC6426 /* InspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B89C6924C7BB942FE00431EB /* InspectorView.swift */; };
+		32CE537054BBE54E7C4CA6E0 /* SystemServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A06EC3072B39BD0F75E760A /* SystemServices.swift */; };
+		38495F590DC054AB33FAE422 /* DemoMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83DDA5D6107F38E55B3BA3D2 /* DemoMode.swift */; };
+		5D549BBBA3FCDA0708BEB66C /* FileTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8183575CF0E34ACCF0E8D3D /* FileTree.swift */; };
+		5EAAFE537A117FBAA99C6CB6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA9AA24CA106EE95F643B4A /* SettingsView.swift */; };
+		60D3D981BFB897E8AA76B4D2 /* TransferList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5592B0C62C3BD5D62F118FB7 /* TransferList.swift */; };
+		63CCC791816DE388A9DCD9F6 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 55E634B922D1C8A4A21A0FE4 /* AppIcon.icon */; };
+		69852B232CBFAD067401D5CF /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D14A11546EF13E7E7B5798 /* MenuBarView.swift */; };
+		7B5168F9727F4CD9CE4348C6 /* Intents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B19D0FF8B3EB4F8EB051D6 /* Intents.swift */; };
+		822FF739A8E6456351E58AE5 /* Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78744A69A59D99D86C5E1750 /* Sheets.swift */; };
+		8E16C2BDD51F8A79B3A57BC8 /* TransferStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACC73C58D8B972B0417B93A /* TransferStore.swift */; };
+		A6831AC9F7DC0FDBF711204C /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5805B83CF068A1877FCEA853 /* Components.swift */; };
+		B695674187C8108F60CD4F81 /* MurmurApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 141E84EBCBA767FF640CA205 /* MurmurApp.swift */; };
+		CCA6160297EC5A1677B8106D /* MurmurKit in Frameworks */ = {isa = PBXBuildFile; productRef = 7E5A870AA24834D2C5AF68DA /* MurmurKit */; };
+		DC2A2252C8FAB60BD05D940D /* MurmurTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BA215B9C3FAE7B41DC93590 /* MurmurTests.swift */; };
+		F84E94D84CFAE0A32CA1E235 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC8A55C4D25C4CBEAA13AD46 /* ContentView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9AB8BC0B749AEA76FA6404A8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 212C51E196E4C5F2E057C421 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42F900FA13D760CB89CF4141;
+			remoteInfo = Murmur;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		141E84EBCBA767FF640CA205 /* MurmurApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MurmurApp.swift; sourceTree = "<group>"; };
+		14D14A11546EF13E7E7B5798 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		174461C5E9DCDEE2305BBEA1 /* Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
+		1EC05706BDDF617F2CBF12AD /* MurmurTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MurmurTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2817413F3EED5052DF0C4BCE /* MurmurKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = MurmurKit; path = Packages/MurmurKit; sourceTree = SOURCE_ROOT; };
+		5592B0C62C3BD5D62F118FB7 /* TransferList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferList.swift; sourceTree = "<group>"; };
+		55E634B922D1C8A4A21A0FE4 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		5805B83CF068A1877FCEA853 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		78744A69A59D99D86C5E1750 /* Sheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sheets.swift; sourceTree = "<group>"; };
+		7A06EC3072B39BD0F75E760A /* SystemServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemServices.swift; sourceTree = "<group>"; };
+		7ACC73C58D8B972B0417B93A /* TransferStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferStore.swift; sourceTree = "<group>"; };
+		7BA215B9C3FAE7B41DC93590 /* MurmurTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MurmurTests.swift; sourceTree = "<group>"; };
+		83DDA5D6107F38E55B3BA3D2 /* DemoMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoMode.swift; sourceTree = "<group>"; };
+		9EA9AA24CA106EE95F643B4A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		B89C6924C7BB942FE00431EB /* InspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorView.swift; sourceTree = "<group>"; };
+		BABE1E5B7110CE5AF6941518 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		C834EC374C4A986C47F46292 /* Murmur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Murmur.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D8183575CF0E34ACCF0E8D3D /* FileTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTree.swift; sourceTree = "<group>"; };
+		DC8A55C4D25C4CBEAA13AD46 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		F1B19D0FF8B3EB4F8EB051D6 /* Intents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intents.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D9FDE2E088591FE29B875987 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCA6160297EC5A1677B8106D /* MurmurKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		001444262D284F2CB5040E1E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C834EC374C4A986C47F46292 /* Murmur.app */,
+				1EC05706BDDF617F2CBF12AD /* MurmurTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		12645EE6BB2CF6AC564136AD /* Inspector */ = {
+			isa = PBXGroup;
+			children = (
+				D8183575CF0E34ACCF0E8D3D /* FileTree.swift */,
+				B89C6924C7BB942FE00431EB /* InspectorView.swift */,
+			);
+			path = Inspector;
+			sourceTree = "<group>";
+		};
+		1482E923FA6F4B490BA9C727 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				3A3602B24EC1E53803929806 /* MurmurTests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		1C25EDA8F6E2D974786EDFF1 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				55E634B922D1C8A4A21A0FE4 /* AppIcon.icon */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		38DFAB3BC72C0F02FDE1BC14 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				5805B83CF068A1877FCEA853 /* Components.swift */,
+				174461C5E9DCDEE2305BBEA1 /* Formatting.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		3A3602B24EC1E53803929806 /* MurmurTests */ = {
+			isa = PBXGroup;
+			children = (
+				7BA215B9C3FAE7B41DC93590 /* MurmurTests.swift */,
+			);
+			path = MurmurTests;
+			sourceTree = "<group>";
+		};
+		55AFDC8326A0474CEB29A9C9 = {
+			isa = PBXGroup;
+			children = (
+				59F28B1FCF6287698AD0412D /* Packages */,
+				1C25EDA8F6E2D974786EDFF1 /* Resources */,
+				E94075B2B99FA2DBCE175698 /* Sources */,
+				1482E923FA6F4B490BA9C727 /* Tests */,
+				001444262D284F2CB5040E1E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		59F28B1FCF6287698AD0412D /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				2817413F3EED5052DF0C4BCE /* MurmurKit */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		7834F37AE532590BB09D52A3 /* Murmur */ = {
+			isa = PBXGroup;
+			children = (
+				853AA37891DC5B4106DFF0E0 /* App */,
+				12645EE6BB2CF6AC564136AD /* Inspector */,
+				9C88FCCCD12EC24023169AE6 /* System */,
+				38DFAB3BC72C0F02FDE1BC14 /* UI */,
+				E31AB5DAD80719B404F2F306 /* Views */,
+			);
+			path = Murmur;
+			sourceTree = "<group>";
+		};
+		853AA37891DC5B4106DFF0E0 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				BABE1E5B7110CE5AF6941518 /* AppSettings.swift */,
+				83DDA5D6107F38E55B3BA3D2 /* DemoMode.swift */,
+				141E84EBCBA767FF640CA205 /* MurmurApp.swift */,
+				7ACC73C58D8B972B0417B93A /* TransferStore.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		9C88FCCCD12EC24023169AE6 /* System */ = {
+			isa = PBXGroup;
+			children = (
+				F1B19D0FF8B3EB4F8EB051D6 /* Intents.swift */,
+				7A06EC3072B39BD0F75E760A /* SystemServices.swift */,
+			);
+			path = System;
+			sourceTree = "<group>";
+		};
+		E31AB5DAD80719B404F2F306 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				DC8A55C4D25C4CBEAA13AD46 /* ContentView.swift */,
+				14D14A11546EF13E7E7B5798 /* MenuBarView.swift */,
+				9EA9AA24CA106EE95F643B4A /* SettingsView.swift */,
+				78744A69A59D99D86C5E1750 /* Sheets.swift */,
+				5592B0C62C3BD5D62F118FB7 /* TransferList.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		E94075B2B99FA2DBCE175698 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				7834F37AE532590BB09D52A3 /* Murmur */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		20EFC0E04F507A87E4831E0B /* MurmurTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5CE6E3D0D13150E1B19FB9EB /* Build configuration list for PBXNativeTarget "MurmurTests" */;
+			buildPhases = (
+				C63D8444FF4AE8568C9D7274 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7B6D1123B37343D45528C41E /* PBXTargetDependency */,
+			);
+			name = MurmurTests;
+			packageProductDependencies = (
+			);
+			productName = MurmurTests;
+			productReference = 1EC05706BDDF617F2CBF12AD /* MurmurTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		42F900FA13D760CB89CF4141 /* Murmur */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EDB1F9ED9EE411689FF7A246 /* Build configuration list for PBXNativeTarget "Murmur" */;
+			buildPhases = (
+				55FA5046E9EFCAD54C9E8A85 /* Sources */,
+				5D518C0DA7FA93F54066B380 /* Resources */,
+				D9FDE2E088591FE29B875987 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Murmur;
+			packageProductDependencies = (
+				7E5A870AA24834D2C5AF68DA /* MurmurKit */,
+			);
+			productName = Murmur;
+			productReference = C834EC374C4A986C47F46292 /* Murmur.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		212C51E196E4C5F2E057C421 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					20EFC0E04F507A87E4831E0B = {
+						DevelopmentTeam = 4F2YLTHL8T;
+						ProvisioningStyle = Automatic;
+					};
+					42F900FA13D760CB89CF4141 = {
+						DevelopmentTeam = 4F2YLTHL8T;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 7BC53DFDF5746356F727BB31 /* Build configuration list for PBXProject "Murmur" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 55AFDC8326A0474CEB29A9C9;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				FB9614EF4D4B62B570D3330E /* XCLocalSwiftPackageReference "Packages/MurmurKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 001444262D284F2CB5040E1E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				42F900FA13D760CB89CF4141 /* Murmur */,
+				20EFC0E04F507A87E4831E0B /* MurmurTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5D518C0DA7FA93F54066B380 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				63CCC791816DE388A9DCD9F6 /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		55FA5046E9EFCAD54C9E8A85 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				181456BD9ABEF61E3CC01407 /* AppSettings.swift in Sources */,
+				A6831AC9F7DC0FDBF711204C /* Components.swift in Sources */,
+				F84E94D84CFAE0A32CA1E235 /* ContentView.swift in Sources */,
+				38495F590DC054AB33FAE422 /* DemoMode.swift in Sources */,
+				5D549BBBA3FCDA0708BEB66C /* FileTree.swift in Sources */,
+				07529409872C9DA7F9431E9F /* Formatting.swift in Sources */,
+				2D0A395EE68B61F555BC6426 /* InspectorView.swift in Sources */,
+				7B5168F9727F4CD9CE4348C6 /* Intents.swift in Sources */,
+				69852B232CBFAD067401D5CF /* MenuBarView.swift in Sources */,
+				B695674187C8108F60CD4F81 /* MurmurApp.swift in Sources */,
+				5EAAFE537A117FBAA99C6CB6 /* SettingsView.swift in Sources */,
+				822FF739A8E6456351E58AE5 /* Sheets.swift in Sources */,
+				32CE537054BBE54E7C4CA6E0 /* SystemServices.swift in Sources */,
+				60D3D981BFB897E8AA76B4D2 /* TransferList.swift in Sources */,
+				8E16C2BDD51F8A79B3A57BC8 /* TransferStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C63D8444FF4AE8568C9D7274 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DC2A2252C8FAB60BD05D940D /* MurmurTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7B6D1123B37343D45528C41E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42F900FA13D760CB89CF4141 /* Murmur */;
+			targetProxy = 9AB8BC0B749AEA76FA6404A8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		355F4A46252484FA15A00B8B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/Murmur.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.nearby.Murmur;
+				PRODUCT_NAME = Murmur;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		420C7B55FE80794C3EBC41C9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.nearby.MurmurTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Murmur.app/Contents/MacOS/Murmur";
+			};
+			name = Debug;
+		};
+		780199B9044B5F76C0A845AC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/Murmur.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.nearby.Murmur;
+				PRODUCT_NAME = Murmur;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		9191DF2C32DAEF5A429C8A63 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 4F2YLTHL8T;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A7197FFA1B8526DE3403FF3D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.nearby.MurmurTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Murmur.app/Contents/MacOS/Murmur";
+			};
+			name = Release;
+		};
+		CD9AB829B5233A7B770568EE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 4F2YLTHL8T;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5CE6E3D0D13150E1B19FB9EB /* Build configuration list for PBXNativeTarget "MurmurTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				420C7B55FE80794C3EBC41C9 /* Debug */,
+				A7197FFA1B8526DE3403FF3D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7BC53DFDF5746356F727BB31 /* Build configuration list for PBXProject "Murmur" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CD9AB829B5233A7B770568EE /* Debug */,
+				9191DF2C32DAEF5A429C8A63 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EDB1F9ED9EE411689FF7A246 /* Build configuration list for PBXNativeTarget "Murmur" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				355F4A46252484FA15A00B8B /* Debug */,
+				780199B9044B5F76C0A845AC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		FB9614EF4D4B62B570D3330E /* XCLocalSwiftPackageReference "Packages/MurmurKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/MurmurKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7E5A870AA24834D2C5AF68DA /* MurmurKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MurmurKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 212C51E196E4C5F2E057C421 /* Project object */;
+}

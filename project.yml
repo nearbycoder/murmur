@@ -1,0 +1,60 @@
+# Xcode project definition. Generate Murmur.xcodeproj with: xcodegen generate
+name: Murmur
+options:
+  bundleIdPrefix: dev.nearby
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+packages:
+  MurmurKit:
+    path: Packages/MurmurKit
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: 4F2YLTHL8T
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+targets:
+  Murmur:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/Murmur
+      - path: Resources/AppIcon.icon
+        buildPhase: resources
+    dependencies:
+      - package: MurmurKit
+        product: MurmurKit
+    settings:
+      base:
+        PRODUCT_NAME: Murmur
+        PRODUCT_BUNDLE_IDENTIFIER: dev.nearby.Murmur
+        INFOPLIST_FILE: Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/Murmur.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_IDENTITY: "Apple Development"
+        ENABLE_APP_SANDBOX: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        COMBINE_HIDPI_IMAGES: YES
+  MurmurTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/MurmurTests
+    dependencies:
+      - target: Murmur
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.nearby.MurmurTests
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Murmur.app/Contents/MacOS/Murmur"
+schemes:
+  Murmur:
+    build:
+      targets:
+        Murmur: all
+    test:
+      targets:
+        - MurmurTests
