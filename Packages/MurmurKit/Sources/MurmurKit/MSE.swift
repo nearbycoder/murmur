@@ -109,7 +109,7 @@ final class MSEHandshake {
                 let req3 = MSEHandshake.hash(Data("req3".utf8), secret)
                 output.append(Data(zip(req2, req3).map { $0 ^ $1 }))
                 var out = RC4(key: MSEHandshake.hash(Data("keyA".utf8), secret, infoHash.bytes), discard: 1024)
-                var inc = RC4(key: MSEHandshake.hash(Data("keyB".utf8), secret, infoHash.bytes), discard: 1024)
+                let inc = RC4(key: MSEHandshake.hash(Data("keyB".utf8), secret, infoHash.bytes), discard: 1024)
                 var body = MSEHandshake.vc
                 body.appendUInt32(allowPlaintext ? MSEHandshake.cryptoRC4 | MSEHandshake.cryptoPlaintext : MSEHandshake.cryptoRC4)
                 body.appendUInt16(0) // no PadC
