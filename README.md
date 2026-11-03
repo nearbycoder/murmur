@@ -26,13 +26,15 @@ Click a magnet link, pick the files you want, and watch the swarm do the rest. N
 
 - **Magnet links and .torrent files.** Open them from your browser or Finder (one click makes Murmur the default), drop them on the window, or paste them. Murmur notices magnet links on the clipboard and offers to add them.
 - **File selection.** Choose files and a location before adding, or change them any time. Set priorities, and download in order to preview media while it arrives.
-- **Finds peers anywhere.** HTTP(S) and UDP trackers, the mainline DHT for trackerless torrents, and peer exchange. NAT-PMP or UPnP opens your port on the router.
+- **Finds peers anywhere.** HTTP(S) and UDP trackers, the mainline DHT for trackerless torrents, peer exchange, local peer discovery on your network, and HTTP web seeds. NAT-PMP or UPnP opens your port on the router, and you can add your own list of extra trackers to every public torrent.
+- **Encrypted connections.** BitTorrent protocol encryption (MSE/PE) is on by default, so your provider can't single out torrent traffic. Prefer it, require it, or turn it off.
 - **A real inspector.** Speed graphs, a piece map, connected peers with their client, progress and speeds, and the status of every tracker.
-- **Speed limits and Slow Mode.** Global limits, plus a tortoise button (⇧⌘T) for alternative limits.
-- **Queue and seeding rules.** Limit simultaneous downloads, stop seeding at a ratio globally or per transfer, and move transfers up and down the queue.
+- **Speed limits and Slow Mode.** Global and per-transfer limits, plus a tortoise button (⇧⌘T) for alternative limits that can switch on by itself on a schedule (say, weekdays 9 to 5).
+- **Queue and seeding rules.** Limit simultaneous downloads, stop seeding at a ratio globally or per transfer, move transfers up and down the queue, and move finished downloads to another folder automatically.
 - **VPN binding.** Bind to an interface such as your VPN's `utun`, and Murmur stops transferring whenever it disconnects.
 - **Create torrents** from any file or folder, with your trackers, and start seeding at once.
 - **At home on the Mac.** A menu bar extra with live speeds, Dock badge and progress, notifications with *Show in Finder*, Shortcuts actions (add a magnet, pause or resume all, toggle Slow Mode), a watch folder, keep-awake while downloading, and full keyboard control.
+- **Quick Look and statistics.** Preview downloaded files from the inspector, and click the speeds in the status bar for session and all-time totals.
 - **Resumes where it left off.** Progress is saved continuously and checked against your files on launch, so nothing is downloaded twice.
 
 <table>
@@ -41,8 +43,11 @@ Click a magnet link, pick the files you want, and watch the swarm do the rest. N
     <td><img src="docs/screenshots/peers-dark.png" alt="Connected peers"></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/trackers-dark.png" alt="Tracker status"></td>
+    <td><img src="docs/screenshots/trackers-dark.png" alt="Trackers, DHT, peer exchange, local discovery and web seeds"></td>
     <td><img src="docs/screenshots/empty-dark.png" alt="The empty state, a murmuration of starlings"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/screenshots/settings-network-light.png" alt="Network settings: port mapping, encryption, peer discovery and VPN binding" width="420"></td>
   </tr>
 </table>
 
@@ -74,20 +79,23 @@ MurmurKit lives in [`Packages/MurmurKit`](Packages/MurmurKit). It's a standalone
 | BEP 11 | Peer exchange (`ut_pex`) |
 | BEP 12, BEP 15 | Multiple trackers, HTTP(S) and UDP |
 | BEP 7, BEP 23 | Compact IPv4 and IPv6 peer lists |
+| BEP 14 | Local Service Discovery over multicast |
+| BEP 19 | HTTP web seeds, fetched with range requests |
 | BEP 47 | Padding files (hybrid v1/v2 torrents work through their v1 data) |
+| MSE/PE | Protocol encryption: 768-bit Diffie-Hellman and RC4, with plaintext fallback |
 | RFC 6886, UPnP IGD | Port mapping |
 
 Every piece is verified against its SHA-1 hash before it's written, peers that send bad data are banned, and paths inside torrents are sanitized so a malicious torrent can't write outside its folder. File handles, hashing and disk I/O run off the networking queue, with token-bucket rate limiting shared across connections.
 
-It's tested with unit tests, a two-session swarm on localhost (magnet → metadata → download → resume), downloads from real swarms (verified against published checksums, including trackerless magnets through the DHT only), and transfers in both directions with [aria2](https://aria2.github.io).
+It's tested with unit tests, swarms of sessions on localhost (magnet → metadata → download → resume, encryption required and disabled, local discovery, per-transfer limits), a web-seed-only download from a local HTTP server, downloads from real swarms (verified against published checksums, including trackerless magnets through the DHT only), and transfers in both directions with [aria2](https://aria2.github.io), in plaintext and with aria2 requiring encryption.
 
-Not yet supported: protocol encryption (MSE/PE), µTP, web seeds and v2-only torrents. Pull requests are welcome.
+Not yet supported: µTP, the fast extension and v2-only torrents. Pull requests are welcome.
 
 There's a command-line client for trying the engine:
 
 ```sh
 cd Packages/MurmurKit
-swift run -c release murmur-cli "magnet:?xt=urn:btih:…" --dir ~/Downloads
+swift run -c release murmur-cli "magnet:?xt=urn:btih:…" --dir ~/Downloads [--encryption required]
 swift run -c release murmur-cli create ./folder folder.torrent
 ```
 

@@ -1,4 +1,5 @@
 import MurmurKit
+import QuickLook
 import SwiftUI
 
 enum InspectorTab: String, CaseIterable, Identifiable {
@@ -174,6 +175,8 @@ private struct OverviewTab: View {
                 InspectorCard("Options") {
                     Toggle("Download in order", isOn: Binding(get: { status.isSequential }, set: { store.setSequential([status.id], $0) }))
                         .help("Fetch pieces from start to end, so media can be previewed while downloading")
+                    TransferLimitRow(title: "Limit download", value: status.downloadLimit) { store.setSpeedLimits([status.id], download: $0, upload: nil) }
+                    TransferLimitRow(title: "Limit upload", value: status.uploadLimit) { store.setSpeedLimits([status.id], download: nil, upload: $0) }
                     HStack {
                         Button("Copy Magnet Link", systemImage: "link") { store.copyMagnetLinks([status.id]) }
                         Button("Verify", systemImage: "checkmark.shield") { store.recheck([status.id]) }
@@ -196,6 +199,29 @@ private struct OverviewTab: View {
                 .font(.title3.weight(.semibold))
                 .monospacedDigit()
                 .contentTransition(.numericText())
+        }
+    }
+}
+
+/// A per-transfer speed limit: a checkbox and a KB/s field.
+private struct TransferLimitRow: View {
+    let title: String
+    let value: Int
+    let set: (Int) -> Void
+    @State private var draft = 500
+
+    var body: some View {
+        HStack {
+            Toggle(title, isOn: Binding(get: { value > 0 }, set: { set($0 ? max(draft, 1) * 1024 : 0) }))
+            Spacer()
+            TextField("KB/s", value: Binding(get: { value > 0 ? value / 1024 : draft }, set: { new in
+                draft = max(new, 1)
+                if value > 0 { set(draft * 1024) }
+            }), format: .number)
+            .frame(width: 64)
+            .multilineTextAlignment(.trailing)
+            .disabled(value == 0)
+            Text("KB/s").foregroundStyle(.secondary)
         }
     }
 }
@@ -232,6 +258,7 @@ private struct FilesTab: View {
     @Environment(TransferStore.self) private var store
     let status: TorrentStatus
     let details: TorrentDetails?
+    @State private var previewURL: URL?
 
     var body: some View {
         if let details, !details.files.isEmpty {
@@ -242,7 +269,12 @@ private struct FilesTab: View {
                     store.setFilePriorities(status.id, Dictionary(uniqueKeysWithValues: ids.map { ($0, priority) }))
                 }, reveal: { node in
                     reveal(node, details: details)
+                }, preview: { node in
+                    previewURL = fileURL(node, details: details)
+                }, open: { node in
+                    if let url = fileURL(node, details: details) { NSWorkspace.shared.open(url) }
                 })
+                .quickLookPreview($previewURL)
                 HStack {
                     let selected = details.files.filter { $0.priority != .skip }
                     Text("\(selected.count) of \(details.files.count) selected · \(selected.reduce(Int64(0)) { $0 + $1.length }.bytes)")
@@ -259,6 +291,12 @@ private struct FilesTab: View {
         } else {
             ContentUnavailableView(status.hasMetadata ? "Loading…" : "Waiting for File List", systemImage: "doc.on.doc", description: Text(status.hasMetadata ? "" : "The files appear once Murmur gets the torrent’s details from a peer."))
         }
+    }
+
+    private func fileURL(_ node: FileNode, details: TorrentDetails) -> URL? {
+        guard let content = status.contentURL, let id = node.fileIDs.first, let file = details.files.first(where: { $0.id == id }) else { return nil }
+        let url = status.isMultiFile ? content.appendingPathComponent(file.path) : content
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     private func reveal(_ node: FileNode, details: TorrentDetails) {
@@ -336,6 +374,8 @@ private struct PeersTab: View {
             case "U": parts.append("uploading to them")
             case "u": parts.append("they want data, we're choking")
             case "I": parts.append("incoming connection")
+            case "E": parts.append("encrypted")
+            case "L": parts.append("found on your local network")
             case "X": parts.append("found through peer exchange")
             case "H": parts.append("found through the DHT")
             case "S": parts.append("snubbed")
@@ -366,6 +406,29 @@ private struct TrackersTab: View {
                 if !status.isPrivate {
                     sourceRow("DHT", enabled: store.settings.enableDHT, detail: "\(store.stats.dhtNodes) nodes")
                     sourceRow("Peer Exchange", enabled: store.settings.enablePEX, detail: "Learns peers from peers")
+                    sourceRow("Local Discovery", enabled: store.settings.enableLocalDiscovery, detail: "Peers on your network")
+                }
+                ForEach(details?.webSeedStatuses ?? []) { seed in
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 10) {
+                            Circle().fill(seed.status == "Not working" ? Color.red : (seed.status == "Retrying" ? .orange : .green)).frame(width: 8, height: 8)
+                            Label(URLComponents(string: seed.url)?.host ?? seed.url, systemImage: "globe")
+                                .labelStyle(CompactLabelStyle())
+                                .font(.callout.weight(.medium))
+                                .lineLimit(1)
+                                .help(seed.url)
+                            Spacer()
+                            if seed.downloadRate > 0 {
+                                Text(seed.downloadRate.speed).font(.caption.monospacedDigit()).foregroundStyle(Color.accentColor)
+                            }
+                        }
+                        Text("Web seed · \(seed.message.map { "\(seed.status): \($0)" } ?? seed.status) · \(seed.downloaded.bytes)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .padding(.leading, 18)
+                    }
+                    .padding(.vertical, 2)
                 }
                 ForEach(details?.trackers ?? []) { tracker in
                     TrackerRow(tracker: tracker)

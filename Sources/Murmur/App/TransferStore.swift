@@ -112,6 +112,10 @@ final class TransferStore {
     /// A magnet link spotted on the clipboard when Murmur became active.
     var clipboardMagnet: MagnetLink?
     private var lastPasteboardChange = NSPasteboard.general.changeCount
+    private var lastSessionDownloaded: Int64 = 0
+    private var lastSessionUploaded: Int64 = 0
+    private var scheduleWasActive: Bool?
+    let launchDate = Date()
 
     private init() {}
 
@@ -147,6 +151,8 @@ final class TransferStore {
         if !removed.isEmpty { selection.subtract(removed) }
         transfers = statuses
         self.stats = stats
+        recordTotals(stats)
+        applySchedule()
         tick += 1
         speedHistory.append(SpeedSample(id: tick, down: Double(stats.downloadRate), up: Double(stats.uploadRate)))
         if speedHistory.count > 120 { speedHistory.removeFirst(speedHistory.count - 120) }
@@ -161,6 +167,27 @@ final class TransferStore {
         refreshDetails()
         DockController.shared.update(transfers: statuses, stats: stats, settings: settings)
         SleepGuard.shared.update(active: settings.preventSleep && statuses.contains { $0.state == .downloading || $0.state == .fetchingMetadata })
+    }
+
+    /// Adds this session's new bytes to the all-time totals.
+    private func recordTotals(_ stats: SessionStats) {
+        guard !DemoMode.isEnabled else { return }
+        let down = stats.sessionDownloaded - lastSessionDownloaded
+        let up = stats.sessionUploaded - lastSessionUploaded
+        lastSessionDownloaded = stats.sessionDownloaded
+        lastSessionUploaded = stats.sessionUploaded
+        if down > 0 { settings.allTimeDownloaded += down }
+        if up > 0 { settings.allTimeUploaded += up }
+    }
+
+    /// Switches Slow Mode as the schedule's window opens and closes, leaving manual changes in between alone.
+    private func applySchedule() {
+        guard settings.scheduleEnabled else { scheduleWasActive = nil; return }
+        let active = settings.scheduleCovers(Date())
+        if active != scheduleWasActive {
+            if scheduleWasActive != nil || active { settings.slowMode = active }
+            scheduleWasActive = active
+        }
     }
 
     func refreshDetails() {
@@ -181,8 +208,15 @@ final class TransferStore {
     private func handle(_ event: SessionEvent) {
         switch event {
         case .finished(let id, let name):
+            var url = transfers.first { $0.id == id }?.contentURL
+            if settings.moveCompletedEnabled, let folder = settings.moveCompletedFolder,
+               let t = transfers.first(where: { $0.id == id }), t.savePath.standardizedFileURL != folder.standardizedFileURL {
+                session?.move(id, to: folder) { [weak self] error in
+                    if let error { self?.alert = AlertItem(title: "Couldn't Move “\(name)”", message: error.localizedDescription) }
+                }
+                url = t.contentURL.map { folder.appendingPathComponent($0.lastPathComponent) }
+            }
             guard settings.notifyOnCompletion else { return }
-            let url = transfers.first { $0.id == id }?.contentURL
             Notifier.shared.notifyFinished(name: name, url: url)
         case .failed(_, let name, let message):
             Notifier.shared.notifyFailed(name: name, message: message)
@@ -367,6 +401,7 @@ final class TransferStore {
     }
 
     func setRatioLimit(_ ids: [InfoHash]? = nil, _ limit: Double?) { session?.setRatioLimit(targets(ids), limit) }
+    func setSpeedLimits(_ ids: [InfoHash]? = nil, download: Int?, upload: Int?) { session?.setSpeedLimits(targets(ids), download: download, upload: upload) }
 
     func reveal(_ ids: [InfoHash]? = nil) {
         let urls = transfers.filter { targets(ids).contains($0.id) }.map { t -> URL in
@@ -418,4 +453,5 @@ final class TransferStore {
 
     /// Lets the menu bar extra and intents bring the main window back.
     @ObservationIgnored var openMainWindow: (() -> Void)?
+    @ObservationIgnored var openSettings: (() -> Void)?
 }

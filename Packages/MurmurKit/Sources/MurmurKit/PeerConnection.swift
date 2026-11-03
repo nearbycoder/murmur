@@ -14,6 +14,20 @@ final class PeerConnection {
     private var gotHandshake = false
     private var closed = false
 
+    // Protocol encryption (MSE/PE).
+    private var mse: MSEHandshake?
+    private var decryptor: RC4?
+    private var encryptor: RC4?
+    private var pendingWrites: [Data] = []
+    private var classifiedIncoming = false
+    /// For incoming connections: finds the torrent for an MSE `req2` hash, and the session's policy.
+    var incomingLookup: ((Data) -> InfoHash?)?
+    var incomingMode: EncryptionMode = .preferred
+    /// True when this connection tried (or is using) the encrypted handshake.
+    private(set) var attemptedEncryption = false
+    /// True once traffic is RC4-encrypted.
+    private(set) var isEncrypted = false
+
     /// Return false to drop the connection (wrong torrent, ourselves, banned).
     var onHandshake: ((Handshake) -> Bool)?
     var onMessage: ((PeerMessage) -> Void)?
@@ -22,7 +36,8 @@ final class PeerConnection {
     /// Called after queued data has gone out, so uploads can keep the pipe full.
     var onDrain: (() -> Void)?
 
-    var downloadLimiter: RateLimiter?
+    /// Session-wide and per-torrent limits; reading waits for the slowest.
+    var downloadLimiters: [RateLimiter] = []
     private(set) var queuedSendBytes = 0
     private(set) var isConnected = false
     private(set) var lastReceived = Date()
@@ -48,6 +63,12 @@ final class PeerConnection {
 
     var remoteEndpoint: NWEndpoint { connection.endpoint }
 
+    /// Makes an outgoing connection open with the encrypted handshake. Call before `start()`.
+    func useEncryption(infoHash: InfoHash, allowPlaintext: Bool) {
+        mse = MSEHandshake(role: .initiator(infoHash: infoHash, allowPlaintext: allowPlaintext))
+        attemptedEncryption = true
+    }
+
     func start() {
         connection.stateUpdateHandler = { [weak self] state in
             guard let self else { return }
@@ -55,6 +76,10 @@ final class PeerConnection {
             case .ready:
                 guard !isConnected else { return }
                 isConnected = true
+                if let mse {
+                    mse.start()
+                    rawWrite(mse.takeOutput())
+                }
                 onConnected?()
                 receive()
             case .waiting(let error), .failed(let error):
@@ -78,6 +103,20 @@ final class PeerConnection {
 
     private func write(_ data: Data) {
         guard !closed else { return }
+        // Peer wire messages wait until the encrypted handshake is done.
+        if mse != nil {
+            pendingWrites.append(data)
+            return
+        }
+        if encryptor != nil {
+            rawWrite(encryptor!.process(data))
+        } else {
+            rawWrite(data)
+        }
+    }
+
+    private func rawWrite(_ data: Data) {
+        guard !closed, !data.isEmpty else { return }
         queuedSendBytes += data.count
         lastSent = Date()
         connection.send(content: data, completion: .contentProcessed { [weak self] error in
@@ -112,10 +151,9 @@ final class PeerConnection {
             guard let self, !closed else { return }
             if let data, !data.isEmpty {
                 lastReceived = Date()
-                buffer.append(data)
-                process()
+                receivedRaw(data)
                 if closed { return }
-                let wait = downloadLimiter?.consume(data.count) ?? 0
+                let wait = downloadLimiters.map { $0.consume(data.count) }.max() ?? 0
                 if isComplete { fail(Failure.closedByPeer); return }
                 if let error { fail(error); return }
                 if wait > 0 {
@@ -129,6 +167,52 @@ final class PeerConnection {
             if isComplete { fail(Failure.closedByPeer); return }
             receive()
         }
+    }
+
+    private func receivedRaw(_ raw: Data) {
+        var data = raw
+        if !isIncoming || classifiedIncoming {
+            if decryptor != nil { data = decryptor!.process(data) }
+        } else {
+            // An incoming connection is plaintext if it opens with the BitTorrent header, encrypted otherwise.
+            buffer.append(data)
+            guard buffer.count - readOffset >= 20 else { return }
+            classifiedIncoming = true
+            let head = buffer.subdata(in: buffer.startIndex + readOffset ..< buffer.startIndex + readOffset + 20)
+            data = Data(buffer.dropFirst(readOffset))
+            buffer = Data()
+            readOffset = 0
+            if head.first == 19 && head.dropFirst() == Handshake.protocolName {
+                guard incomingMode != .required else { fail(Failure.protocolError("plaintext not allowed")); return }
+            } else {
+                guard let lookup = incomingLookup else { fail(Failure.protocolError("encryption unavailable")); return }
+                mse = MSEHandshake(role: .responder(lookup: lookup, allowPlaintext: incomingMode != .required))
+                attemptedEncryption = true
+                mse!.start()
+            }
+        }
+        if let handshake = mse {
+            let result = handshake.feed(data)
+            rawWrite(handshake.takeOutput())
+            switch result {
+            case .needMore:
+                return
+            case .failed:
+                fail(Failure.protocolError("encryption handshake failed"))
+                return
+            case .done(let incoming, let outgoing, let payload, _):
+                mse = nil
+                decryptor = incoming
+                encryptor = outgoing
+                isEncrypted = incoming != nil
+                let queued = pendingWrites
+                pendingWrites = []
+                for item in queued { write(item) }
+                data = payload
+            }
+        }
+        buffer.append(data)
+        process()
     }
 
     private func process() {

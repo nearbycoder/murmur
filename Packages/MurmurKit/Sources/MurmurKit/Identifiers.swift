@@ -107,8 +107,8 @@ extension Data {
 /// Builds our peer id (Azureus style, `-MU1000-` plus 12 random characters) and names
 /// other clients from theirs.
 public enum PeerIdentity {
-    public static let clientVersion = "1.0.0"
-    static let prefix = "-MU1000-"
+    public static let clientVersion = "1.1.0"
+    static let prefix = "-MU1100-"
 
     public static func generate() -> Data {
         let alphabet = Array("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".utf8)

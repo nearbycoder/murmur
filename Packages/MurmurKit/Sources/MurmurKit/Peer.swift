@@ -84,6 +84,8 @@ final class PieceDownload {
     var receivedCount = 0
     var contributors = Set<String>()
     let started = Date()
+    /// Set while a web seed is fetching the whole piece.
+    var webSeed: WebSeed?
 
     init(index: Int, size: Int) {
         self.index = index
@@ -113,4 +115,6 @@ struct AddressInfo {
     var banned = false
     var isSeed = false
     var discovered = Date()
+    /// Refused or broke the encrypted handshake, so connect in plaintext next time.
+    var plaintextOnly = false
 }

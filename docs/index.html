@@ -117,10 +117,11 @@
       .sky    { --tint: #1f2b3b; --tone: #8db5ea; }
     }
 
-    .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
     .gallery figure { margin: 0; }
     .gallery .frame { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); background: var(--surface); }
-    .gallery .frame img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; object-position: right top; }
+    .gallery .frame img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; object-position: right top; }
+    .gallery .frame.settings img { object-position: center top; }
     .gallery figcaption { margin-top: 12px; font-size: 15px; color: var(--muted); }
     .gallery figcaption b { color: var(--ink); font-weight: 600; }
 
@@ -232,7 +233,7 @@
         <div class="feature violet">
           <div class="ico"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="4" r="1.2"/><circle cx="12" cy="20" r="1.2"/><path d="M8 11l8-4M8 13l8 4"/></svg></div>
           <h3>Finds peers anywhere</h3>
-          <p>HTTP and UDP trackers, the DHT for trackerless torrents, and peer exchange. Port mapping with NAT-PMP or UPnP lets others reach you.</p>
+          <p>HTTP and UDP trackers, the DHT, peer exchange, Macs on your own network and HTTP web seeds. NAT-PMP or UPnP lets others reach you.</p>
         </div>
         <div class="feature teal">
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 17c2-1 3-6 5-6s3 4 5 4 3-8 5-8 2 3 3 4"/></svg></div>
@@ -242,7 +243,7 @@
         <div class="feature amber">
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M5 15a7 7 0 0 1 14 0"/><path d="M12 15l3-4"/><path d="M4 19h16"/></svg></div>
           <h3>Speed limits and Slow Mode</h3>
-          <p>Cap download and upload speed, or tap the tortoise to switch to your alternative limits when you need the bandwidth back.</p>
+          <p>Cap speeds for everything or a single transfer. Tap the tortoise for alternative limits, or let them switch on by schedule during work hours.</p>
         </div>
         <div class="feature sky">
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/><path d="M9.5 12.5h5M12 10v5"/></svg></div>
@@ -257,12 +258,27 @@
         <div class="feature indigo">
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></div>
           <h3>Queue and seeding</h3>
-          <p>Limit how many download at once, stop seeding at a ratio (globally or per transfer), and pick up exactly where you left off after a restart.</p>
+          <p>Limit how many download at once, stop seeding at a ratio, move finished downloads to another folder, and pick up where you left off after a restart.</p>
         </div>
         <div class="feature coral">
           <div class="ico"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg></div>
           <h3>Create torrents</h3>
           <p>Share a file or folder: Murmur hashes it, writes the .torrent with your trackers, and starts seeding it straight away.</p>
+        </div>
+        <div class="feature teal">
+          <div class="ico"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+          <h3>Encrypted connections</h3>
+          <p>Protocol encryption is on by default, so your provider can't single out torrent traffic. Prefer it, require it, or turn it off.</p>
+        </div>
+        <div class="feature sky">
+          <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/></svg></div>
+          <h3>Quick Look</h3>
+          <p>Preview any downloaded file right from the inspector with Quick Look, or open it in its app, without hunting through Finder.</p>
+        </div>
+        <div class="feature amber">
+          <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+          <h3>Statistics</h3>
+          <p>Click the speeds in the status bar for this session's totals and everything you've ever downloaded and shared.</p>
         </div>
       </div>
     </section>
@@ -282,8 +298,12 @@
           <figcaption><b>Peers.</b> Who you're trading with, what client they run, and how fast.</figcaption>
         </figure>
         <figure>
-          <div class="frame"><img src="screenshots/trackers-dark.png" alt="The Trackers tab with the status of each tracker, the DHT and peer exchange" loading="lazy"></div>
-          <figcaption><b>Trackers.</b> Seeds and leechers per tracker, plus the DHT and peer exchange.</figcaption>
+          <div class="frame"><picture><source srcset="screenshots/trackers-dark.png" media="(prefers-color-scheme: dark)"><img src="screenshots/trackers-light.png" alt="The Trackers tab with each tracker, the DHT, peer exchange, local discovery and a web seed" loading="lazy"></picture></div>
+          <figcaption><b>Trackers.</b> Seeds and leechers per tracker, plus the DHT, peer exchange, local discovery and web seeds.</figcaption>
+        </figure>
+        <figure>
+          <div class="frame settings"><picture><source srcset="screenshots/settings-network-dark.png" media="(prefers-color-scheme: dark)"><img src="screenshots/settings-network-light.png" alt="Network settings with port mapping, encryption, peer discovery and VPN binding" loading="lazy"></picture></div>
+          <figcaption><b>Settings.</b> Port mapping, encryption, how to find peers, and binding to your VPN.</figcaption>
         </figure>
       </div>
     </section>
@@ -293,7 +313,7 @@
         <div>
           <h2>A BitTorrent engine written in Swift</h2>
           <p>Murmur doesn't wrap libtorrent or Transmission. Its engine, MurmurKit, is a from-scratch implementation built on Network.framework and CryptoKit, with no third-party dependencies.</p>
-          <p>It's tested against real swarms and other clients: it downloads Linux ISOs at full line speed, fetches trackerless magnet links through the DHT alone, and trades data both ways with aria2. Every piece is checked against its SHA-1 hash before it's written.</p>
+          <p>It's tested against real swarms and other clients: it downloads Linux ISOs at full line speed, fetches trackerless magnet links through the DHT alone, and trades data both ways with aria2, including when aria2 insists on encryption. Every piece is checked against its SHA-1 hash before it's written.</p>
           <p>The engine is a standalone Swift package with a command-line client, so you can use it in your own projects too.</p>
         </div>
         <div class="card">
@@ -304,7 +324,10 @@
             <tr><td>BEP 11</td><td><b>Peer exchange</b> (PEX)</td></tr>
             <tr><td>BEP 12 · 15</td><td><b>Multiple trackers</b>, HTTP(S) and UDP</td></tr>
             <tr><td>BEP 23 · 7</td><td><b>Compact peer lists</b>, IPv4 and IPv6</td></tr>
+            <tr><td>BEP 14</td><td><b>Local peer discovery</b> over multicast</td></tr>
+            <tr><td>BEP 19</td><td><b>Web seeds</b> over HTTP range requests</td></tr>
             <tr><td>BEP 47</td><td><b>Padding files</b> in hybrid torrents</td></tr>
+            <tr><td>MSE/PE</td><td><b>Protocol encryption</b>: Diffie-Hellman key exchange and RC4</td></tr>
             <tr><td>RFC 6886</td><td><b>NAT-PMP</b>, with <b>UPnP IGD</b> as a fallback</td></tr>
           </table>
         </div>
@@ -357,8 +380,12 @@
           <p>Connect your VPN, then pick its interface (usually starting with <code>utun</code>) in <b>Settings → Network → Network interface</b>. Murmur only transfers over that interface and pauses networking whenever it disappears.</p>
         </details>
         <details>
-          <summary>Does it support encryption, µTP or BitTorrent v2?</summary>
-          <p>Not yet. Murmur connects over plain TCP, which nearly every client accepts. Hybrid v1/v2 torrents work; v2-only torrents are on the roadmap, along with protocol encryption and µTP. Contributions are welcome.</p>
+          <summary>Does it encrypt connections?</summary>
+          <p>Yes. Murmur speaks BitTorrent protocol encryption (MSE/PE), the same scheme qBittorrent, Transmission and libtorrent use. By default it tries encryption first and falls back to plaintext for peers that don't support it. You can require encryption in <b>Settings → Network</b>. It hides torrent traffic from simple traffic shaping; it isn't a substitute for a VPN.</p>
+        </details>
+        <details>
+          <summary>Does it support µTP or BitTorrent v2?</summary>
+          <p>Not yet. Murmur connects over TCP, which every client accepts. Hybrid v1/v2 torrents work; v2-only torrents and µTP are on the roadmap. Contributions are welcome.</p>
         </details>
         <details>
           <summary>Which Macs does it support?</summary>

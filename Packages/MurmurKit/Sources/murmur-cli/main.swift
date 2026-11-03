@@ -1,5 +1,5 @@
 // A headless client for trying the engine against real swarms.
-//   murmur-cli <magnet | file.torrent> [--dir <folder>] [--seconds <n>] [--seed] [--peer <ip:port>]
+//   murmur-cli <magnet | file.torrent> [--dir <folder>] [--seconds <n>] [--seed] [--peer <ip:port>] [--encryption disabled|preferred|required]
 //   murmur-cli create <file or folder> <out.torrent>
 import Foundation
 import MurmurKit
@@ -30,6 +30,7 @@ let keepSeeding = arguments.contains("--seed")
 let state = FileManager.default.temporaryDirectory.appendingPathComponent("murmur-cli-state")
 var config = Session.Configuration(downloadDirectory: directory, stateDirectory: state)
 config.maxActiveDownloads = 0
+if let mode = option("--encryption").flatMap(EncryptionMode.init(rawValue:)) { config.encryption = mode }
 let session = Session(configuration: config)
 session.onEvent = { event in print("event: \(event)") }
 nonisolated(unsafe) var lastStats = SessionStats()
@@ -62,6 +63,9 @@ Thread.detachNewThread {
                          elapsed, s.state.rawValue, String(s.name.prefix(30)), s.progress * 100,
                          formatBytes(s.downloadRate), formatBytes(s.uploadRate), s.connectedPeers, s.connectedSeeds, s.knownPeers, trackers))
             if let error = s.errorMessage { print("  error: \(error)") }
+            for seed in details?.webSeedStatuses ?? [] {
+                print("  web seed \(seed.url): \(seed.status) \(formatBytes(seed.downloaded)) at \(formatBytes(seed.downloadRate))/s \(seed.message ?? "")")
+            }
             if s.state == .seeding && !keepSeeding {
                 print("done in \(Int(elapsed))s")
                 exit(0)

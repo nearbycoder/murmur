@@ -72,6 +72,9 @@ struct FileTreeList: View {
     var showsProgress = true
     let setPriority: ([Int], FilePriority) -> Void
     var reveal: ((FileNode) -> Void)?
+    /// Quick Look and open, for files that are on disk.
+    var preview: ((FileNode) -> Void)?
+    var open: ((FileNode) -> Void)?
 
     var body: some View {
         List {
@@ -82,6 +85,11 @@ struct FileTreeList: View {
                 .contextMenu {
                     ForEach([FilePriority.high, .normal, .low, .skip]) { p in
                         Button(p.title) { setPriority(node.fileIDs, p) }
+                    }
+                    if !node.isFolder, let preview, let open {
+                        Divider()
+                        Button("Quick Look") { preview(node) }
+                        Button("Open") { open(node) }
                     }
                     if let reveal {
                         Divider()

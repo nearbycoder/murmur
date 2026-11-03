@@ -29,6 +29,12 @@ private struct GeneralSettings: View {
                 }
                 Toggle("Show files and location before adding a torrent", isOn: $settings.showAddOptions)
                 Toggle("Start transfers automatically", isOn: $settings.startTransfersAutomatically)
+                Toggle("Move finished downloads", isOn: $settings.moveCompletedEnabled)
+                if settings.moveCompletedEnabled {
+                    LabeledContent("Move to") {
+                        FolderButton(url: settings.moveCompletedFolder, placeholder: "Choose…") { settings.moveCompletedFolder = $0 }
+                    }
+                }
             }
             Section {
                 LabeledContent {
@@ -73,6 +79,79 @@ private struct GeneralSettings: View {
     }
 }
 
+private struct ExtraTrackersEditor: View {
+    @Binding var text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Extra trackers").font(.headline)
+            Text("One URL per line. They're added to new public torrents; private ones are left alone.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            TextEditor(text: $text)
+                .font(.callout.monospaced())
+                .scrollContentBackground(.hidden)
+                .padding(6)
+                .frame(width: 380, height: 140)
+                .background(.background.secondary, in: RoundedRectangle(cornerRadius: 8))
+            Button("Add Popular Public Trackers") {
+                let popular = ["udp://tracker.opentrackr.org:1337/announce", "udp://open.demonii.com:1337/announce", "udp://open.stealth.si:80/announce",
+                               "udp://tracker.torrent.eu.org:451/announce", "udp://exodus.desync.com:6969/announce", "udp://tracker.openbittorrent.com:6969/announce"]
+                var lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                for url in popular where !lines.contains(url) { lines.append(url) }
+                text = lines.joined(separator: "\n")
+            }
+            .controlSize(.small)
+        }
+        .padding(14)
+    }
+}
+
+/// Hours and minutes stored as minutes after midnight.
+private struct TimePicker: View {
+    @Binding var minutes: Int
+
+    var body: some View {
+        DatePicker("", selection: Binding(get: {
+            Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: Date()) ?? Date()
+        }, set: { date in
+            let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+            minutes = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+        }), displayedComponents: .hourAndMinute)
+        .labelsHidden()
+        .datePickerStyle(.field)
+    }
+}
+
+private struct WeekdayPicker: View {
+    @Binding var days: Set<Int>
+
+    var body: some View {
+        HStack(spacing: 4) {
+            // Start the week where the user's calendar does.
+            let calendar = Calendar.current
+            let symbols = calendar.veryShortWeekdaySymbols
+            ForEach(0..<7, id: \.self) { offset in
+                let day = (calendar.firstWeekday - 1 + offset) % 7 + 1
+                let on = days.contains(day)
+                Button {
+                    if on { days.remove(day) } else { days.insert(day) }
+                } label: {
+                    Text(symbols[day - 1])
+                        .font(.caption.weight(.semibold))
+                        .frame(width: 22, height: 22)
+                        .foregroundStyle(on ? Color.white : .primary)
+                        .background(on ? Color.accentColor : Color.secondary.opacity(0.15), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(calendar.weekdaySymbols[day - 1])
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+    }
+}
+
 private struct TransferSettings: View {
     @Bindable private var settings = AppSettings.shared
 
@@ -89,6 +168,17 @@ private struct TransferSettings: View {
                 }
                 LabeledContent("Download") { KBField(value: $settings.slowDownloadKB) }
                 LabeledContent("Upload") { KBField(value: $settings.slowUploadKB) }
+                Toggle("Turn on automatically", isOn: $settings.scheduleEnabled)
+                if settings.scheduleEnabled {
+                    LabeledContent("From") {
+                        HStack {
+                            TimePicker(minutes: $settings.scheduleStart)
+                            Text("to").foregroundStyle(.secondary)
+                            TimePicker(minutes: $settings.scheduleEnd)
+                        }
+                    }
+                    LabeledContent("On") { WeekdayPicker(days: $settings.scheduleDays) }
+                }
             }
             Section("Queue and seeding") {
                 Stepper(value: $settings.maxActiveDownloads, in: 0...50) {
@@ -115,6 +205,20 @@ private struct NetworkSettings: View {
     @Environment(TransferStore.self) private var store
     @State private var portText = ""
     @State private var interfaces = NetworkInterfaces.list()
+    @State private var editingTrackers = false
+
+    private var encryptionHelp: String {
+        switch settings.encryption {
+        case .preferred: "Encrypts when the peer supports it, which keeps your provider from singling out torrent traffic."
+        case .required: "Only connects to peers that encrypt. You may find fewer peers."
+        case .disabled: "Connects in plaintext, but still accepts encrypted connections."
+        }
+    }
+
+    private var extraTrackerSummary: String {
+        let count = settings.extraTrackers.split(whereSeparator: \.isNewline).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count
+        return count == 0 ? "Add your own trackers to every public torrent." : "\(count) tracker\(count == 1 ? "" : "s") added to every public torrent."
+    }
 
     var body: some View {
         Form {
@@ -146,6 +250,16 @@ private struct NetworkSettings: View {
                     Text("Uses NAT-PMP or UPnP so other peers can reach you.")
                 }
             }
+            Section {
+                Picker(selection: $settings.encryption) {
+                    Text("Prefer encryption").tag(EncryptionMode.preferred)
+                    Text("Require encryption").tag(EncryptionMode.required)
+                    Text("Don't encrypt").tag(EncryptionMode.disabled)
+                } label: {
+                    Text("Encryption")
+                    Text(encryptionHelp)
+                }
+            }
             Section("Finding peers") {
                 Toggle(isOn: $settings.enableDHT) {
                     Text("Distributed hash table (DHT)")
@@ -154,6 +268,17 @@ private struct NetworkSettings: View {
                 Toggle(isOn: $settings.enablePEX) {
                     Text("Peer exchange (PEX)")
                     Text("Learn about more peers from the ones you're connected to.")
+                }
+                Toggle(isOn: $settings.enableLocalDiscovery) {
+                    Text("Local peer discovery")
+                    Text("Find peers on your own network, like other Macs at home.")
+                }
+                LabeledContent {
+                    Button("Edit…") { editingTrackers = true }
+                        .popover(isPresented: $editingTrackers) { ExtraTrackersEditor(text: $settings.extraTrackers) }
+                } label: {
+                    Text("Extra trackers")
+                    Text(extraTrackerSummary)
                 }
             }
             Section {

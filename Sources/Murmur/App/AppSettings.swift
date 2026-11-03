@@ -46,6 +46,23 @@ final class AppSettings {
     var watchFolder: URL? { didSet { defaults.set(watchFolder?.path, forKey: "watchFolder") } }
     var hasOnboarded: Bool { didSet { defaults.set(hasOnboarded, forKey: "hasOnboarded") } }
 
+    var encryption: EncryptionMode { didSet { defaults.set(encryption.rawValue, forKey: "encryption"); apply() } }
+    var enableLocalDiscovery: Bool { didSet { defaults.set(enableLocalDiscovery, forKey: "enableLocalDiscovery"); apply() } }
+    /// One tracker URL per line, added to every public torrent.
+    var extraTrackers: String { didSet { defaults.set(extraTrackers, forKey: "extraTrackers"); apply() } }
+    var moveCompletedEnabled: Bool { didSet { defaults.set(moveCompletedEnabled, forKey: "moveCompletedEnabled") } }
+    var moveCompletedFolder: URL? { didSet { defaults.set(moveCompletedFolder?.path, forKey: "moveCompletedFolder") } }
+    /// Turn Slow Mode on automatically between two times on chosen days.
+    var scheduleEnabled: Bool { didSet { defaults.set(scheduleEnabled, forKey: "scheduleEnabled") } }
+    var scheduleStart: Int { didSet { defaults.set(scheduleStart, forKey: "scheduleStart") } }
+    var scheduleEnd: Int { didSet { defaults.set(scheduleEnd, forKey: "scheduleEnd") } }
+    /// Calendar weekdays (1 is Sunday).
+    var scheduleDays: Set<Int> { didSet { defaults.set(Array(scheduleDays), forKey: "scheduleDays") } }
+    /// Totals across every launch.
+    var allTimeDownloaded: Int64 { didSet { defaults.set(Double(allTimeDownloaded), forKey: "allTimeDownloaded") } }
+    var allTimeUploaded: Int64 { didSet { defaults.set(Double(allTimeUploaded), forKey: "allTimeUploaded") } }
+    let firstLaunch: Date
+
     /// Called whenever an engine setting changes.
     @ObservationIgnored var onEngineChange: (() -> Void)?
 
@@ -69,6 +86,11 @@ final class AppSettings {
             "showDockBadge": true,
             "notifyOnCompletion": true,
             "preventSleep": true,
+            "encryption": EncryptionMode.preferred.rawValue,
+            "enableLocalDiscovery": true,
+            "scheduleStart": 9 * 60,
+            "scheduleEnd": 17 * 60,
+            "scheduleDays": [2, 3, 4, 5, 6],
         ])
         downloadFolder = defaults.string(forKey: "downloadFolder").map { URL(fileURLWithPath: $0) } ?? downloads
         showAddOptions = defaults.bool(forKey: "showAddOptions")
@@ -96,6 +118,23 @@ final class AppSettings {
         watchFolderEnabled = defaults.bool(forKey: "watchFolderEnabled")
         watchFolder = defaults.string(forKey: "watchFolder").map { URL(fileURLWithPath: $0) }
         hasOnboarded = defaults.bool(forKey: "hasOnboarded")
+        encryption = EncryptionMode(rawValue: defaults.string(forKey: "encryption") ?? "") ?? .preferred
+        enableLocalDiscovery = defaults.bool(forKey: "enableLocalDiscovery")
+        extraTrackers = defaults.string(forKey: "extraTrackers") ?? ""
+        moveCompletedEnabled = defaults.bool(forKey: "moveCompletedEnabled")
+        moveCompletedFolder = defaults.string(forKey: "moveCompletedFolder").map { URL(fileURLWithPath: $0) }
+        scheduleEnabled = defaults.bool(forKey: "scheduleEnabled")
+        scheduleStart = defaults.integer(forKey: "scheduleStart")
+        scheduleEnd = defaults.integer(forKey: "scheduleEnd")
+        scheduleDays = Set(defaults.array(forKey: "scheduleDays") as? [Int] ?? [])
+        allTimeDownloaded = Int64(defaults.double(forKey: "allTimeDownloaded"))
+        allTimeUploaded = Int64(defaults.double(forKey: "allTimeUploaded"))
+        if let first = defaults.object(forKey: "firstLaunch") as? Date {
+            firstLaunch = first
+        } else {
+            firstLaunch = Date()
+            defaults.set(firstLaunch, forKey: "firstLaunch")
+        }
         // Pick a random high port once, so it stays the same across launches (and router mappings).
         var port = defaults.integer(forKey: "listenPort")
         if port == 0 {
@@ -129,7 +168,26 @@ final class AppSettings {
         config.maxPeersPerTorrent = maxPeersPerTorrent
         config.seedRatioLimit = stopAtRatio ? ratioLimit : nil
         config.networkInterface = networkInterface.isEmpty ? nil : networkInterface
+        config.encryption = encryption
+        config.enableLocalDiscovery = enableLocalDiscovery
+        config.extraTrackers = extraTrackers.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         return config
+    }
+
+    /// Whether the Slow Mode schedule covers this moment. Windows that cross midnight count from the start day.
+    func scheduleCovers(_ date: Date) -> Bool {
+        AppSettings.schedule(covers: date, start: scheduleStart, end: scheduleEnd, days: scheduleDays)
+    }
+
+    nonisolated static func schedule(covers date: Date, start: Int, end: Int, days: Set<Int>, calendar: Calendar = .current) -> Bool {
+        let parts = calendar.dateComponents([.weekday, .hour, .minute], from: date)
+        let minute = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+        let weekday = parts.weekday ?? 1
+        if start <= end {
+            return days.contains(weekday) && minute >= start && minute < end
+        }
+        let yesterday = weekday == 1 ? 7 : weekday - 1
+        return (days.contains(weekday) && minute >= start) || (days.contains(yesterday) && minute < end)
     }
 
     var launchAtLogin: Bool {

@@ -39,6 +39,12 @@ public final class Session: @unchecked Sendable {
         public var seedWhenComplete = true
         /// Only use this network interface (a VPN's utun, say). Nil uses any.
         public var networkInterface: String?
+        /// BitTorrent protocol encryption (MSE/PE).
+        public var encryption: EncryptionMode = .preferred
+        /// Find peers on the local network (BEP 14).
+        public var enableLocalDiscovery = true
+        /// Trackers added to every public torrent, to find more peers.
+        public var extraTrackers: [String] = []
 
         public init(downloadDirectory: URL, stateDirectory: URL) {
             self.downloadDirectory = downloadDirectory
@@ -66,6 +72,8 @@ public final class Session: @unchecked Sendable {
     private var timer: DispatchSourceTimer?
     private var pathMonitor: NWPathMonitor?
     private var portMapper: PortMapper?
+    private var localDiscovery: LocalDiscovery?
+    private var lsdAnnounced: [InfoHash: Date] = [:]
     private var portMappingStatus: String?
     private var downloadMeter = RateMeter()
     private var uploadMeter = RateMeter()
@@ -118,6 +126,7 @@ public final class Session: @unchecked Sendable {
             dht?.stop()
             listener?.cancel()
             portMapper?.stop()
+            localDiscovery?.stop()
             // Give the "stopped" announces a moment to leave.
             queue.asyncAfter(deadline: .now() + 1.2) {
                 self.diskQueue.async {
@@ -136,7 +145,7 @@ public final class Session: @unchecked Sendable {
             guard started else { return }
             if old.listenPort != configuration.listenPort && configuration.listenPort != 0 && configuration.listenPort != listenPort {
                 openPort(configuration.listenPort)
-            } else if old.enableDHT != configuration.enableDHT || old.enablePortMapping != configuration.enablePortMapping {
+            } else if old.enableDHT != configuration.enableDHT || old.enablePortMapping != configuration.enablePortMapping || old.enableLocalDiscovery != configuration.enableLocalDiscovery {
                 openPort(listenPort)
             }
             if old.networkInterface != configuration.networkInterface { refreshInterface(pathMonitor?.currentPath) }
@@ -195,6 +204,17 @@ public final class Session: @unchecked Sendable {
             self.listener = listener
         }
 
+        localDiscovery?.stop()
+        localDiscovery = nil
+        if config.enableLocalDiscovery, let discovery = try? LocalDiscovery(queue: queue) {
+            discovery.onPeer = { [weak self] hash, peer in
+                guard let self, let torrent = torrents[hash], torrent.isRunning, !torrent.isPrivate else { return }
+                torrent.addPeers([peer], source: .lsd)
+            }
+            localDiscovery = discovery
+            lsdAnnounced = [:]
+        }
+
         if config.enablePortMapping {
             let mapper = PortMapper(port: port, queue: queue)
             mapper.onChange = { [weak self] status in self?.portMappingStatus = status }
@@ -238,6 +258,8 @@ public final class Session: @unchecked Sendable {
     private func accept(_ connection: NWConnection) {
         guard !interfaceMissing, totalConnections < config.maxConnections + 20 else { connection.cancel(); return }
         let peer = PeerConnection(incoming: connection, queue: queue)
+        peer.incomingMode = config.encryption
+        peer.incomingLookup = { [weak self] req2 in self?.torrentForMSE(req2) }
         let id = ObjectIdentifier(peer)
         pendingIncoming[id] = peer
         peer.onHandshake = { [weak self, weak peer] handshake in
@@ -253,6 +275,11 @@ public final class Session: @unchecked Sendable {
             pendingIncoming[id] = nil
             peer.close()
         }
+    }
+
+    /// Finds the torrent an encrypted incoming connection is for, from HASH("req2", info hash).
+    private func torrentForMSE(_ req2: Data) -> InfoHash? {
+        torrents.keys.first { (Data("req2".utf8) + $0.bytes).sha1() == req2 }
     }
 
     // MARK: - Shared limits
@@ -291,6 +318,7 @@ public final class Session: @unchecked Sendable {
             torrent.creationDate = meta.creationDate
             if let filePriorities { torrent.restore(have: nil, priorities: filePriorities) }
             torrent.userPaused = paused
+            if !meta.info.isPrivate { addExtraTrackers(to: torrent) }
             insert(torrent)
             saveTorrentFile(torrent)
             // Data from an earlier download may already be there.
@@ -312,13 +340,24 @@ public final class Session: @unchecked Sendable {
             }
             let torrent = Torrent(session: self, infoHash: magnet.infoHash, info: nil, trackers: magnet.trackers.map { [$0] }, savePath: directory ?? config.downloadDirectory)
             torrent.displayName = magnet.displayName
+            torrent.webSeeds = magnet.webSeeds
             torrent.userPaused = paused
             torrent.addPeers(magnet.peers, source: .magnet)
+            addExtraTrackers(to: torrent)
             insert(torrent)
             saveResume(torrent)
             applyQueue()
             return torrent.infoHash
         }
+    }
+
+    private func addExtraTrackers(to torrent: Torrent) {
+        let known = Set(torrent.trackerTiers.flatMap { $0 })
+        let extra = config.extraTrackers.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty && !known.contains($0) }
+        guard !extra.isEmpty else { return }
+        torrent.extraTrackers = Set(extra)
+        torrent.trackerTiers += extra.map { [$0] }
+        torrent.rebuildTrackers()
     }
 
     private func insert(_ torrent: Torrent) {
@@ -383,6 +422,14 @@ public final class Session: @unchecked Sendable {
         modify(ids) { torrent in
             torrent.ratioLimit = limit
             if torrent.finishedByRatio { torrent.finishedByRatio = false }
+        }
+    }
+
+    /// Per-transfer speed limits in bytes per second (zero or nil for unlimited).
+    public func setSpeedLimits(_ ids: [InfoHash], download: Int?, upload: Int?) {
+        modify(ids) { torrent in
+            if let download { torrent.downloadLimiter.bytesPerSecond = max(download, 0) }
+            if let upload { torrent.uploadLimiter.bytesPerSecond = max(upload, 0) }
         }
     }
 
@@ -497,6 +544,7 @@ public final class Session: @unchecked Sendable {
             for torrent in torrents.values where torrent.resumeDirty { saveResume(torrent) }
         }
         if ticks % 300 == 0 { saveDHT() }
+        announceLocally(now: now)
         // Try the router again now and then if mapping failed (it may have been asleep, or permission was just granted).
         if ticks % 600 == 0, config.enablePortMapping, portMappingStatus == nil, let mapper = portMapper {
             mapper.stop()
@@ -506,6 +554,17 @@ public final class Session: @unchecked Sendable {
             portMapper = fresh
         }
         publish()
+    }
+
+    /// Announces running public torrents on the LAN: soon after they start, then every five minutes.
+    private func announceLocally(now: Date) {
+        guard let localDiscovery else { return }
+        let due = torrents.values.filter { t in
+            t.isRunning && !t.isPrivate && (lsdAnnounced[t.infoHash].map { now.timeIntervalSince($0) >= 300 } ?? true)
+        }
+        guard !due.isEmpty else { return }
+        for t in due { lsdAnnounced[t.infoHash] = now }
+        localDiscovery.announce(due.map(\.infoHash), port: listenPort)
     }
 
     private func publish() {
@@ -544,6 +603,8 @@ public final class Session: @unchecked Sendable {
         var fileDates: [Double]?
         var queuePosition: Int
         var ratioLimit: Double?
+        var downloadLimit: Int?
+        var uploadLimit: Int?
     }
 
     private func torrentFileURL(_ id: InfoHash) -> URL { torrentsDirectory.appendingPathComponent("\(id.hex).torrent") }
@@ -559,7 +620,7 @@ public final class Session: @unchecked Sendable {
         let record = ResumeRecord(
             name: torrent.name,
             savePath: torrent.savePath.path,
-            magnet: torrent.info == nil ? MagnetLink(infoHash: torrent.infoHash, displayName: torrent.displayName, trackers: torrent.trackerTiers.flatMap { $0 }).uri : nil,
+            magnet: torrent.info == nil ? MagnetLink(infoHash: torrent.infoHash, displayName: torrent.displayName, trackers: torrent.trackerTiers.flatMap { $0 }, webSeeds: torrent.webSeeds).uri : nil,
             trackers: torrent.trackerTiers,
             addedDate: torrent.addedDate,
             completedDate: torrent.completedDate,
@@ -572,7 +633,9 @@ public final class Session: @unchecked Sendable {
             have: torrent.info == nil || torrent.isChecking ? nil : torrent.have.data,
             fileDates: torrent.fileDates(),
             queuePosition: torrent.queuePosition,
-            ratioLimit: torrent.ratioLimit
+            ratioLimit: torrent.ratioLimit,
+            downloadLimit: torrent.downloadLimiter.bytesPerSecond,
+            uploadLimit: torrent.uploadLimiter.bytesPerSecond
         )
         torrent.resumeDirty = false
         let url = resumeFileURL(torrent.infoHash)
@@ -595,6 +658,7 @@ public final class Session: @unchecked Sendable {
                 info = parsed.info
             }
             guard info != nil || record.magnet != nil else { continue }
+            let savedMagnet = record.magnet.flatMap { try? MagnetLink($0) }
             let torrent = Torrent(session: self, infoHash: hash, info: info, trackers: record.trackers, savePath: URL(fileURLWithPath: record.savePath))
             if let meta {
                 torrent.webSeeds = meta.webSeeds
@@ -603,6 +667,7 @@ public final class Session: @unchecked Sendable {
                 torrent.creationDate = meta.creationDate
             }
             torrent.displayName = record.name
+            if info == nil, let savedMagnet { torrent.webSeeds = savedMagnet.webSeeds }
             torrent.addedDate = record.addedDate
             torrent.completedDate = record.completedDate
             torrent.uploadedTotal = record.uploaded
@@ -612,6 +677,8 @@ public final class Session: @unchecked Sendable {
             torrent.isSequential = record.sequential
             torrent.queuePosition = record.queuePosition
             torrent.ratioLimit = record.ratioLimit
+            torrent.downloadLimiter.bytesPerSecond = record.downloadLimit ?? 0
+            torrent.uploadLimiter.bytesPerSecond = record.uploadLimit ?? 0
             if info != nil {
                 torrent.restore(have: record.have, priorities: record.priorities?.compactMap(FilePriority.init(rawValue:)))
                 torrent.markLoaded()

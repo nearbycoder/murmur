@@ -21,12 +21,15 @@ public struct MagnetLink: Sendable, Equatable {
     public var trackers: [String]
     /// `x.pe` peer addresses to try directly.
     public var peers: [PeerAddress]
+    /// `ws` web seed URLs (BEP 19).
+    public var webSeeds: [String]
 
-    public init(infoHash: InfoHash, displayName: String? = nil, trackers: [String] = [], peers: [PeerAddress] = []) {
+    public init(infoHash: InfoHash, displayName: String? = nil, trackers: [String] = [], peers: [PeerAddress] = [], webSeeds: [String] = []) {
         self.infoHash = infoHash
         self.displayName = displayName
         self.trackers = trackers
         self.peers = peers
+        self.webSeeds = webSeeds
     }
 
     public init(_ string: String) throws {
@@ -47,6 +50,7 @@ public struct MagnetLink: Sendable, Equatable {
         var name: String?
         var trackers: [String] = []
         var peers: [PeerAddress] = []
+        var webSeeds: [String] = []
         for pair in query.split(separator: "&") {
             let parts = pair.split(separator: "=", maxSplits: 1)
             guard parts.count == 2 else { continue }
@@ -64,6 +68,8 @@ public struct MagnetLink: Sendable, Equatable {
                 }
             case "dn":
                 name = value
+            case "ws":
+                if !webSeeds.contains(value) { webSeeds.append(value) }
             case "tr":
                 if !trackers.contains(value) { trackers.append(value) }
             case "x":
@@ -73,7 +79,7 @@ public struct MagnetLink: Sendable, Equatable {
             }
         }
         guard let hash else { throw sawV2 ? MagnetError.v2Only : MagnetError.missingInfoHash }
-        self.init(infoHash: hash, displayName: name, trackers: trackers, peers: peers)
+        self.init(infoHash: hash, displayName: name, trackers: trackers, peers: peers, webSeeds: webSeeds)
     }
 
     public var uri: String {
@@ -86,6 +92,9 @@ public struct MagnetLink: Sendable, Equatable {
             if let encoded = tracker.addingPercentEncoding(withAllowedCharacters: allowed) { s += "&tr=\(encoded)" }
         }
         for peer in peers { s += "&x.pe=\(peer)" }
+        for seed in webSeeds {
+            if let encoded = seed.addingPercentEncoding(withAllowedCharacters: allowed) { s += "&ws=\(encoded)" }
+        }
         return s
     }
 

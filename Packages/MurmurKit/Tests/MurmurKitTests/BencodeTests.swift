@@ -60,6 +60,12 @@ struct MagnetTests {
         #expect(again.displayName == "A & B")
     }
 
+    @Test func parsesWebSeeds() throws {
+        let link = try MagnetLink("magnet:?xt=urn:btih:c12fe1c06bba254a9dc9f519b335aa7c1367a88a&ws=https%3A%2F%2Fmirror.example%2Ffiles%2F")
+        #expect(link.webSeeds == ["https://mirror.example/files/"])
+        #expect(try MagnetLink(link.uri).webSeeds == link.webSeeds)
+    }
+
     @Test func rejectsNonMagnets() {
         #expect(throws: MagnetError.self) { try MagnetLink("https://example.com") }
         #expect(throws: MagnetError.self) { try MagnetLink("magnet:?dn=nothing") }

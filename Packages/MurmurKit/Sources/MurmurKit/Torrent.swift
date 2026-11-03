@@ -7,7 +7,10 @@ final class Torrent {
     let infoHash: InfoHash
     private(set) var info: TorrentInfo?
     var trackerTiers: [[String]]
-    var webSeeds: [String] = []
+    var webSeeds: [String] = [] {
+        didSet { webSeedClients = webSeeds.filter(WebSeed.isSupported).map(WebSeed.init(url:)) }
+    }
+    private var webSeedClients: [WebSeed] = []
     var comment: String?
     var createdBy: String?
     var creationDate: Date?
@@ -18,6 +21,11 @@ final class Torrent {
     var queuePosition = 0
     var ratioLimit: Double?
     var isSequential = false
+    /// Per-torrent limits in bytes per second, on top of the session's. Zero is unlimited.
+    let downloadLimiter = RateLimiter()
+    let uploadLimiter = RateLimiter()
+    /// Trackers added from the session's extra list, dropped again if the torrent turns out private.
+    var extraTrackers = Set<String>()
 
     // State flags; `state` is derived from them.
     var userPaused = false
@@ -175,6 +183,11 @@ final class Torrent {
             return
         }
         metadataPieces = []
+        if parsed.isPrivate && !extraTrackers.isEmpty {
+            trackerTiers = trackerTiers.map { $0.filter { !extraTrackers.contains($0) } }.filter { !$0.isEmpty }
+            extraTrackers = []
+            rebuildTrackers()
+        }
         setInfo(parsed, priorities: nil)
         session.saveTorrentFile(self)
         resumeDirty = true
@@ -359,6 +372,7 @@ final class Torrent {
         lookupDHTIfNeeded(now: now)
         maintainPeers(now: now)
         if info == nil { requestMetadataFromAll() }
+        useWebSeeds(now: now)
         for peer in peers.values where peer.handshaken {
             fillRequests(peer)
             serve(peer)
@@ -448,12 +462,16 @@ final class Torrent {
         entry.connected = true
         addresses[address] = entry
         let connection = PeerConnection(address: address, queue: session.queue, requiredInterface: session.requiredInterface)
+        let mode = session.config.encryption
+        if mode == .required || (mode == .preferred && !entry.plaintextOnly) {
+            connection.useEncryption(infoHash: infoHash, allowPlaintext: mode != .required)
+        }
         let peer = Peer(connection: connection, address: address, source: entry.source)
         let id = ObjectIdentifier(peer)
         peers[id] = peer
         session.halfOpen += 1
         var countedHalfOpen = true
-        connection.downloadLimiter = session.downloadLimiter
+        connection.downloadLimiters = [session.downloadLimiter, downloadLimiter]
         connection.onConnected = { [weak self, weak peer] in
             guard let self, let peer else { return }
             if countedHalfOpen { session.halfOpen -= 1; countedHalfOpen = false }
@@ -480,7 +498,7 @@ final class Torrent {
         if peers.values.contains(where: { $0.address == address }) { return false }
         let peer = Peer(connection: connection, address: address, source: .incoming)
         peers[ObjectIdentifier(peer)] = peer
-        connection.downloadLimiter = session.downloadLimiter
+        connection.downloadLimiters = [session.downloadLimiter, downloadLimiter]
         wire(peer)
         connection.onClose = { [weak self, weak peer] error in
             guard let self, let peer else { return }
@@ -529,7 +547,13 @@ final class Torrent {
         guard peers[id] != nil else { return }
         if var entry = addresses[peer.address] {
             entry.connected = false
-            if !peer.handshaken {
+            if !peer.handshaken && !peer.connection.isIncoming && peer.connection.isConnected && peer.connection.attemptedEncryption
+                && session.config.encryption == .preferred && !entry.plaintextOnly {
+                // The peer took the connection but not the encrypted handshake: retry in plaintext.
+                entry.plaintextOnly = true
+                entry.nextAttempt = Date().addingTimeInterval(2)
+                addresses[peer.address] = entry
+            } else if !peer.handshaken {
                 entry.failures += 1
                 entry.nextAttempt = Date().addingTimeInterval(min(30 * pow(2, Double(entry.failures)), 3600))
                 if entry.failures >= 5 && entry.source != .magnet && entry.source != .manual { addresses[peer.address] = nil } else { addresses[peer.address] = entry }
@@ -716,7 +740,9 @@ final class Torrent {
     }
 
     /// Rarest first among the highest priority, with random tie breaks; lowest index in sequential mode.
-    private func pickPiece(for peer: Peer) -> Int? {
+    private func pickPiece(for peer: Peer) -> Int? { pickPiece { peer.has($0) } }
+
+    private func pickPiece(where available: (Int) -> Bool) -> Int? {
         guard let info else { return nil }
         var best: Int?
         var bestPriority: UInt8 = 0
@@ -728,7 +754,7 @@ final class Torrent {
         for n in 0..<count {
             let i = (n + offset) % count
             let p = piecePriority[i]
-            guard p > 0, p >= bestPriority, !have[i], active[i] == nil, !verifying.contains(i), peer.has(i) else { continue }
+            guard p > 0, p >= bestPriority, !have[i], active[i] == nil, !verifying.contains(i), available(i) else { continue }
             if isSequential {
                 // Ascending scan: keep the first piece of the highest priority seen.
                 if p > bestPriority { best = i; bestPriority = p }
@@ -847,7 +873,58 @@ final class Torrent {
         }
     }
 
+    // MARK: - Web seeds
+
+    private func useWebSeeds(now: Date) {
+        for seed in webSeedClients { seed.download.tick() }
+        guard let info, let storage, !isWantedComplete else { return }
+        for seed in webSeedClients where !seed.disabled && seed.nextAttempt <= now {
+            // Two pieces at a time per server; leave the rarest pieces to the swarm's natural order.
+            while seed.inFlight.count < 2, active.count < maxActivePieces, let index = pickPiece(where: { _ in true }) {
+                let piece = PieceDownload(index: index, size: info.pieceSize(index))
+                piece.webSeed = seed
+                piece.blocks = Array(repeating: .requested, count: piece.blocks.count)
+                active[index] = piece
+                seed.inFlight.insert(index)
+                seed.fetch(piece: index, info: info, segments: storage.pieceSegments(index), size: piece.size, queue: session.queue) { [weak self, weak seed] result in
+                    guard let self, let seed else { return }
+                    seed.inFlight.remove(index)
+                    switch result {
+                    case .success(let data):
+                        seed.failures = 0
+                        seed.lastError = nil
+                        seed.download.add(data.count)
+                        downloadMeter.add(data.count)
+                        downloadedTotal += Int64(data.count)
+                        session.recordDownload(data.count)
+                        resumeDirty = true
+                        let wait = max(session.downloadLimiter.consume(data.count), downloadLimiter.consume(data.count))
+                        if wait > 0 { seed.nextAttempt = Date().addingTimeInterval(wait) }
+                        // Peers may have finished it first during endgame.
+                        guard active[index] === piece else { return }
+                        piece.data = data
+                        piece.blocks = Array(repeating: .received, count: piece.blocks.count)
+                        piece.receivedCount = piece.blocks.count
+                        active[index] = nil
+                        verify(piece)
+                    case .failure(let error):
+                        seed.failures += 1
+                        seed.lastError = error.localizedDescription
+                        seed.nextAttempt = Date().addingTimeInterval(min(15 * pow(2, Double(seed.failures)), 1800))
+                        if seed.failures >= 8 { seed.disabled = true }
+                        if active[index] === piece { cancelPiece(index) }
+                    }
+                }
+            }
+        }
+    }
+
     private func pieceFailed(_ piece: PieceDownload) {
+        if let seed = piece.webSeed {
+            seed.failures += 3
+            seed.lastError = "Sent data that didn't match the torrent"
+            if seed.failures >= 6 { seed.disabled = true }
+        }
         verifying.remove(piece.index)
         pickerGeneration += 1
         // Ban a peer that alone sent a bad piece, or keeps sending them.
@@ -891,8 +968,8 @@ final class Torrent {
     // MARK: - Uploading
 
     private var uploadSlots: Int {
-        let limit = session.uploadLimiter.bytesPerSecond
-        if limit > 0 { return max(2, min(session.config.uploadSlotsPerTorrent, limit / (24 * 1024))) }
+        let limits = [session.uploadLimiter.bytesPerSecond, uploadLimiter.bytesPerSecond].filter { $0 > 0 }
+        if let limit = limits.min() { return max(2, min(session.config.uploadSlotsPerTorrent, limit / (24 * 1024))) }
         return session.config.uploadSlotsPerTorrent
     }
 
@@ -948,7 +1025,7 @@ final class Torrent {
 
     private func serve(_ peer: Peer) {
         guard let storage, !peer.isServing, !peer.amChoking, !peer.incoming.isEmpty, peer.connection.queuedSendBytes < 512 * 1024 else { return }
-        let delay = session.uploadLimiter.delay
+        let delay = max(session.uploadLimiter.delay, uploadLimiter.delay)
         if delay > 0 {
             peer.isServing = true
             session.queue.asyncAfter(deadline: .now() + delay) { [weak self, weak peer] in
@@ -978,6 +1055,7 @@ final class Torrent {
                     uploadedTotal += Int64(data.count)
                     session.recordUpload(data.count)
                     _ = session.uploadLimiter.consume(data.count)
+                    _ = uploadLimiter.consume(data.count)
                     resumeDirty = true
                 }
                 serve(peer)
@@ -1264,7 +1342,9 @@ final class Torrent {
             magnetLink: MagnetLink(infoHash: infoHash, displayName: name, trackers: trackerTiers.flatMap { $0 }).uri,
             primaryFileExtension: ext,
             isMultiFile: info?.isMultiFile ?? false,
-            ratioLimit: ratioLimit
+            ratioLimit: ratioLimit,
+            downloadLimit: downloadLimiter.bytesPerSecond,
+            uploadLimit: uploadLimiter.bytesPerSecond
         )
     }
 
@@ -1302,8 +1382,10 @@ final class Torrent {
             if peer.amInterested { flags += peer.peerChoking ? "d" : "D" }
             if peer.peerInterested { flags += peer.amChoking ? "u" : "U" }
             if peer.connection.isIncoming { flags += "I" }
+            if peer.connection.isEncrypted { flags += "E" }
             if peer.source == .pex { flags += "X" }
             if peer.source == .dht { flags += "H" }
+            if peer.source == .lsd { flags += "L" }
             if peer.snubbed { flags += "S" }
             if optimistic == ObjectIdentifier(peer) { flags += "O" }
             let progress = peer.hasAll ? 1 : (peer.bitfield?.fraction ?? 0)
@@ -1326,7 +1408,8 @@ final class Torrent {
         }
         return TorrentDetails(id: infoHash, files: files, peers: peerList, trackers: trackerList, pieceMap: pieceMap,
                               pieceCount: info?.pieceCount ?? 0, pieceLength: info?.pieceLength ?? 0,
-                              comment: comment, createdBy: createdBy, creationDate: creationDate, webSeeds: webSeeds)
+                              comment: comment, createdBy: createdBy, creationDate: creationDate, webSeeds: webSeeds,
+                              webSeedStatuses: webSeedClients.map { WebSeedStatus(url: $0.url, status: $0.status, message: $0.lastError, downloadRate: $0.download.rate, downloaded: $0.download.total) })
     }
 
     /// Moves downloaded files to a new folder, pausing transfers while they move.

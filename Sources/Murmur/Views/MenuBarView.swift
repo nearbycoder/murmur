@@ -24,6 +24,7 @@ struct MenuBarLabel: View {
 struct MenuBarView: View {
     @Environment(TransferStore.self) private var store
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         @Bindable var settings = store.settings
@@ -98,6 +99,10 @@ struct MenuBarView: View {
                     }
                 }
                 Spacer()
+                Button("Settings…") {
+                    openSettings()
+                    NSApp.activate()
+                }
                 Button("Open Murmur") { openMain() }
                     .keyboardShortcut("o")
             }

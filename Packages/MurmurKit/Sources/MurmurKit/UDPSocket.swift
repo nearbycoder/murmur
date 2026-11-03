@@ -59,9 +59,15 @@ final class UDPSocket {
     private let source: DispatchSourceRead
     var onPacket: ((Data, NodeEndpoint) -> Void)?
 
-    init(port: UInt16, queue: DispatchQueue, interfaceIndex: UInt32? = nil) throws {
+    init(port: UInt16, queue: DispatchQueue, interfaceIndex: UInt32? = nil, multicastGroup: UInt32? = nil) throws {
         let sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
         guard sock >= 0 else { throw POSIXError(.init(rawValue: errno) ?? .EIO) }
+        if multicastGroup != nil {
+            // Other BitTorrent clients on this Mac share the discovery port.
+            var yes: Int32 = 1
+            setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, socklen_t(MemoryLayout<Int32>.size))
+            setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &yes, socklen_t(MemoryLayout<Int32>.size))
+        }
         if var index = interfaceIndex {
             setsockopt(sock, IPPROTO_IP, IP_BOUND_IF, &index, socklen_t(MemoryLayout<UInt32>.size))
         }
@@ -75,6 +81,12 @@ final class UDPSocket {
             throw POSIXError(.init(rawValue: code) ?? .EADDRINUSE)
         }
         _ = fcntl(sock, F_SETFL, fcntl(sock, F_GETFL) | O_NONBLOCK)
+        if let group = multicastGroup {
+            var request = ip_mreq(imr_multiaddr: in_addr(s_addr: group.bigEndian), imr_interface: in_addr(s_addr: 0))
+            setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &request, socklen_t(MemoryLayout<ip_mreq>.size))
+            var ttl: UInt8 = 1
+            setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, socklen_t(MemoryLayout<UInt8>.size))
+        }
         fd = sock
         source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
         let fd = self.fd

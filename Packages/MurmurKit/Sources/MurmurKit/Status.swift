@@ -18,7 +18,7 @@ public enum FilePriority: Int, Codable, Sendable, CaseIterable, Identifiable {
 }
 
 public enum PeerSource: String, Codable, Sendable {
-    case tracker, dht, pex, incoming, magnet, manual
+    case tracker, dht, pex, incoming, magnet, manual, lsd
 }
 
 public struct TorrentStatus: Identifiable, Sendable, Equatable {
@@ -57,6 +57,9 @@ public struct TorrentStatus: Identifiable, Sendable, Equatable {
     public var primaryFileExtension: String?
     public var isMultiFile: Bool
     public var ratioLimit: Double?
+    /// Per-transfer limits in bytes per second; zero is unlimited.
+    public var downloadLimit: Int = 0
+    public var uploadLimit: Int = 0
 
     public var isActive: Bool { state == .downloading || state == .seeding || state == .fetchingMetadata || state == .checking }
     public var isComplete: Bool { hasMetadata && completedSize >= wantedSize && wantedSize > 0 }
@@ -94,7 +97,9 @@ public struct TorrentStatus: Identifiable, Sendable, Equatable {
         magnetLink: String,
         primaryFileExtension: String?,
         isMultiFile: Bool,
-        ratioLimit: Double?
+        ratioLimit: Double?,
+        downloadLimit: Int = 0,
+        uploadLimit: Int = 0
     ) {
         self.id = id
         self.name = name
@@ -129,6 +134,8 @@ public struct TorrentStatus: Identifiable, Sendable, Equatable {
         self.primaryFileExtension = primaryFileExtension
         self.isMultiFile = isMultiFile
         self.ratioLimit = ratioLimit
+        self.downloadLimit = downloadLimit
+        self.uploadLimit = uploadLimit
     }
 }
 
@@ -242,6 +249,7 @@ public struct TorrentDetails: Sendable, Equatable {
     public var createdBy: String?
     public var creationDate: Date?
     public var webSeeds: [String]
+    public var webSeedStatuses: [WebSeedStatus] = []
 
     public init(
         id: InfoHash,
@@ -254,7 +262,8 @@ public struct TorrentDetails: Sendable, Equatable {
         comment: String?,
         createdBy: String?,
         creationDate: Date?,
-        webSeeds: [String]
+        webSeeds: [String],
+        webSeedStatuses: [WebSeedStatus] = []
     ) {
         self.id = id
         self.files = files
@@ -267,6 +276,7 @@ public struct TorrentDetails: Sendable, Equatable {
         self.createdBy = createdBy
         self.creationDate = creationDate
         self.webSeeds = webSeeds
+        self.webSeedStatuses = webSeedStatuses
     }
 }
 
@@ -288,4 +298,21 @@ public enum SessionEvent: Sendable {
     case finished(InfoHash, name: String)
     case metadataReceived(InfoHash, name: String)
     case failed(InfoHash, name: String, message: String)
+}
+
+public struct WebSeedStatus: Identifiable, Sendable, Equatable {
+    public var id: String { url }
+    public let url: String
+    public let status: String
+    public let message: String?
+    public let downloadRate: Int64
+    public let downloaded: Int64
+
+    public init(url: String, status: String, message: String?, downloadRate: Int64, downloaded: Int64) {
+        self.url = url
+        self.status = status
+        self.message = message
+        self.downloadRate = downloadRate
+        self.downloaded = downloaded
+    }
 }

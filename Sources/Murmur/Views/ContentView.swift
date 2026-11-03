@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @Environment(TransferStore.self) private var store
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     @State private var dropTargeted = false
     @State private var showWelcome = false
 
@@ -48,6 +49,7 @@ struct ContentView: View {
         }
         .onAppear {
             store.openMainWindow = { openWindow(id: "main") }
+            store.openSettings = { openSettings() }
             if !store.settings.hasOnboarded && !DemoMode.isEnabled { showWelcome = true }
         }
     }

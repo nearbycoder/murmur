@@ -3,9 +3,16 @@ import MurmurKit
 import SwiftUI
 import UniformTypeIdentifiers
 
+private let byteFormatter: ByteCountFormatter = {
+    let f = ByteCountFormatter()
+    f.countStyle = .file
+    f.allowsNonnumericFormatting = false // "0 KB", not "Zero KB"
+    return f
+}()
+
 extension Int64 {
-    var bytes: String { ByteCountFormatter.string(fromByteCount: self, countStyle: .file) }
-    var speed: String { self <= 0 ? "0 KB/s" : "\(ByteCountFormatter.string(fromByteCount: self, countStyle: .file))/s" }
+    var bytes: String { byteFormatter.string(fromByteCount: self) }
+    var speed: String { self <= 0 ? "0 KB/s" : "\(byteFormatter.string(fromByteCount: self))/s" }
 }
 
 extension Double {

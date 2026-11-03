@@ -232,14 +232,25 @@ struct EmptyStateView: View {
 
 struct StatusFooter: View {
     @Environment(TransferStore.self) private var store
+    @State private var showStatistics = false
 
     var body: some View {
         let stats = store.stats
         HStack(spacing: 14) {
-            Label(stats.downloadRate.speed, systemImage: "arrow.down")
-                .foregroundStyle(stats.downloadRate > 0 ? Color.accentColor : .secondary)
-            Label(stats.uploadRate.speed, systemImage: "arrow.up")
-                .foregroundStyle(stats.uploadRate > 0 ? Color.green : .secondary)
+            Button {
+                showStatistics.toggle()
+            } label: {
+                HStack(spacing: 14) {
+                    Label(stats.downloadRate.speed, systemImage: "arrow.down")
+                        .foregroundStyle(stats.downloadRate > 0 ? Color.accentColor : .secondary)
+                    Label(stats.uploadRate.speed, systemImage: "arrow.up")
+                        .foregroundStyle(stats.uploadRate > 0 ? Color.green : .secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Statistics")
+            .popover(isPresented: $showStatistics, arrowEdge: .top) { StatisticsView() }
             Divider().frame(height: 12)
             Text("\(stats.connectedPeers) peer\(stats.connectedPeers == 1 ? "" : "s")")
             if store.settings.enableDHT {
@@ -315,5 +326,61 @@ private struct ClipboardBanner: View {
         .glassEffect(.regular, in: .rect(cornerRadius: 18))
         .padding(.horizontal, 16)
         .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+}
+
+/// Totals for this session and across every launch.
+struct StatisticsView: View {
+    @Environment(TransferStore.self) private var store
+
+    var body: some View {
+        let stats = store.stats
+        let settings = store.settings
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Statistics").font(.headline)
+            Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
+                GridRow {
+                    Text("")
+                    Text("This session").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    Text("All time").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                }
+                GridRow {
+                    Label("Downloaded", systemImage: "arrow.down").foregroundStyle(Color.accentColor)
+                    Text(stats.sessionDownloaded.bytes)
+                    Text(settings.allTimeDownloaded.bytes)
+                }
+                GridRow {
+                    Label("Uploaded", systemImage: "arrow.up").foregroundStyle(.green)
+                    Text(stats.sessionUploaded.bytes)
+                    Text(settings.allTimeUploaded.bytes)
+                }
+                GridRow {
+                    Label("Ratio", systemImage: "arrow.up.arrow.down").foregroundStyle(.secondary)
+                    Text(ratio(stats.sessionUploaded, stats.sessionDownloaded))
+                    Text(ratio(settings.allTimeUploaded, settings.allTimeDownloaded))
+                }
+                GridRow {
+                    Label("Time", systemImage: "clock").foregroundStyle(.secondary)
+                    Text(store.launchDate, style: .relative)
+                    Text("since \(settings.firstLaunch.formatted(date: .abbreviated, time: .omitted))")
+                }
+            }
+            .font(.callout)
+            .monospacedDigit()
+            Divider()
+            HStack(spacing: 16) {
+                Label("\(store.transfers.count) transfers", systemImage: "tray.full")
+                Label("\(stats.connectedPeers) peers", systemImage: "person.2")
+                Label("\(stats.incomingConnections) incoming", systemImage: "arrow.down.right")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .frame(width: 380)
+    }
+
+    private func ratio(_ up: Int64, _ down: Int64) -> String {
+        down > 0 ? Format.ratio(Double(up) / Double(down)) : "–"
     }
 }

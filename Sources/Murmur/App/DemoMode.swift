@@ -66,9 +66,16 @@ enum DemoMode {
             }
             if scene == "files" { store.selection = [id(items[1].name)] }
             if scene == "noselect" { store.selection = [] }
-            try? await Task.sleep(for: .seconds(0.6))
-            if let window = NSApp.windows.first(where: { $0.canBecomeMain && $0.isVisible }) {
-                print("DEMO_WINDOW \(window.windowNumber)")
+            if scene.hasPrefix("settings-") {
+                UserDefaults.standard.set(String(scene.dropFirst(9)), forKey: "settingsTab")
+                store.openSettings?()
+            }
+            try? await Task.sleep(for: .seconds(scene.hasPrefix("settings-") ? 1.5 : 0.6))
+            let target = scene.hasPrefix("settings-")
+                ? NSApp.windows.first { $0.isVisible && $0.styleMask.contains(.titled) && $0.identifier?.rawValue.hasPrefix("main") != true }
+                : NSApp.windows.first { $0.canBecomeMain && $0.isVisible }
+            if let window = target {
+                print("DEMO_WINDOW \(window.windowNumber) \(window.identifier?.rawValue ?? "")")
                 fflush(stdout)
                 // Scripts that launch through `open` read the window number from a file instead.
                 if let path = UserDefaults.standard.string(forKey: "demoWindowFile") {
@@ -110,7 +117,7 @@ enum DemoMode {
                 errorMessage: nil, checkingProgress: item.state == .checking ? 0.71 : nil, isPrivate: false,
                 hasMetadata: item.state != .fetchingMetadata, fileCount: item.files, isSequential: false, queuePosition: index,
                 magnetLink: "magnet:?xt=urn:btih:\(id(item.name).hex)", primaryFileExtension: item.multi ? nil : item.ext,
-                isMultiFile: item.multi, ratioLimit: nil))
+                isMultiFile: item.multi, ratioLimit: nil, downloadLimit: index == 1 ? 10_240 * 1024 : 0, uploadLimit: 0))
         }
         var stats = SessionStats()
         stats.downloadRate = statuses.reduce(0) { $0 + $1.downloadRate }
@@ -151,7 +158,7 @@ enum DemoMode {
             return PeerStatus(address: PeerAddress(host: "\(prefix).\(Int.random(in: 2...250, using: &generator))", port: UInt16.random(in: 20000...65000, using: &generator)),
                               client: clients[(i + index) % clients.count], progress: progress, downloadRate: down, uploadRate: up,
                               downloaded: down * 90, uploaded: up * 90, isIncoming: i % 4 == 1, source: [.tracker, .dht, .pex, .incoming][i % 4],
-                              flags: (down > 0 ? "D" : "d") + (up > 0 ? "U" : "") + (i % 4 == 1 ? "I" : "") + (i % 4 == 2 ? "X" : "") + (i % 4 == 1 ? "" : "H"))
+                              flags: (down > 0 ? "D" : "d") + (up > 0 ? "U" : "") + (i % 4 == 1 ? "I" : "") + (i % 5 != 3 ? "E" : "") + (i % 4 == 2 ? "X" : "") + (i == 5 ? "L" : (i % 4 == 1 ? "" : "H")))
         }.sorted { $0.downloadRate + $0.uploadRate > $1.downloadRate + $1.uploadRate }
         let trackers = [
             TrackerStatus(url: "udp://tracker.opentrackr.org:1337/announce", tier: 0, status: "Working", message: nil, seeders: item.peers * 31, leechers: item.peers * 4, peers: 80, lastAnnounce: Date().addingTimeInterval(-600), nextAnnounce: Date().addingTimeInterval(1200)),
@@ -169,6 +176,7 @@ enum DemoMode {
         return TorrentDetails(id: id, files: files, peers: item.state == .downloading || item.state == .seeding ? peers : [], trackers: trackers,
                               pieceMap: map, pieceCount: pieceCount, pieceLength: 4 << 20,
                               comment: item.name.hasPrefix("ubuntu") ? "Ubuntu CD releases.ubuntu.com" : nil,
-                              createdBy: "mktorrent 1.1", creationDate: Date().addingTimeInterval(-86400 * 20), webSeeds: [])
+                              createdBy: "mktorrent 1.1", creationDate: Date().addingTimeInterval(-86400 * 20), webSeeds: [],
+                              webSeedStatuses: item.state != .downloading ? [] : [WebSeedStatus(url: item.multi ? "https://download.blender.org/peach/bigbuckbunny_movies/" : "https://releases.ubuntu.com/25.10/", status: "Downloading", message: nil, downloadRate: 1_240_000, downloaded: 412_000_000)])
     }
 }
